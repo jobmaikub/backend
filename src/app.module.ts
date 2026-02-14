@@ -15,6 +15,7 @@ import { SkillsModule } from './admin/skills/skills.module';
 import { UsersModule } from './admin/users/users.module';
 import { UserReportsModule } from './admin/user_reports/user_reports.module';
 import { BanUsersModule } from './admin/ban_users/ban_users.module';
+import { IndustriesModule } from './admin/industries/industries.module'; // ✅ เพิ่ม
 
 @Module({
   imports: [
@@ -34,8 +35,8 @@ import { BanUsersModule } from './admin/ban_users/ban_users.module';
     UserReportsModule,
     BanUsersModule,
     InterestsModule,
+    IndustriesModule, 
   ],
   controllers: [AppController],
 })
 export class AppModule {}
-

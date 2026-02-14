@@ -11,30 +11,9 @@ import {
 } from '@nestjs/common';
 import { CareersService } from './careers.service';
 
-const INDUSTRY_MAP: Record<string, string> = {
-  technology: 'Technology',
-  'design & creative': 'Design & Creative',
-  'business & management': 'Business & Management',
-  healthcare: 'Healthcare',
-  marketing: 'Marketing',
-};
-
-function normalizeIndustry(industry?: string): string {
-  if (!industry) {
-    throw new BadRequestException('industry is required');
-  }
-
-  const normalized = INDUSTRY_MAP[industry.trim().toLowerCase()];
-  if (!normalized) {
-    throw new BadRequestException('invalid industry');
-  }
-
-  return normalized;
-}
-
 @Controller('careers')
 export class CareersController {
-  constructor(private readonly careersService: CareersService) { }
+  constructor(private readonly careersService: CareersService) {}
 
   // ===== CREATE =====
   @Post()
@@ -43,7 +22,7 @@ export class CareersController {
     body: {
       title: string;
       description: string;
-      industry: string;
+      industry_id: number;
 
       minSalary?: number;
       maxSalary?: number;
@@ -55,44 +34,36 @@ export class CareersController {
       interest: string;
     },
   ) {
-    if (!body.interest || !body.interest.trim()) {
+    if (!body.industry_id) {
+      throw new BadRequestException('industry_id is required');
+    }
+
+    if (!body.interest?.trim()) {
       throw new BadRequestException('interest is required');
     }
 
     return this.careersService.createCareer({
       title: body.title,
       description: body.description,
-      industry: normalizeIndustry(body.industry),
+      industry_id: body.industry_id,
 
-      ...(body.minSalary !== undefined && {
-        min_salary: body.minSalary,
-      }),
-      ...(body.maxSalary !== undefined && {
-        max_salary: body.maxSalary,
-      }),
-      ...(body.growth !== undefined && {
-        growth_rate: body.growth,
-      }),
-      ...(body.image && {
-        image_url: body.image,
-      }),
-      ...(body.required_skills && {
-        required_skills: body.required_skills,
-      }),
-      ...(body.responsibilities && {
-        responsibilities: body.responsibilities,
-      }),
+      min_salary: body.minSalary,
+      max_salary: body.maxSalary,
+      growth_rate: body.growth,
+      image_url: body.image,
 
+      required_skills: body.required_skills,
+      responsibilities: body.responsibilities,
       interest: body.interest.trim(),
     });
   }
 
-  // ===== GET ALL / BY INDUSTRY =====
+  // ===== GET ALL =====
   @Get()
-  getCareers(@Query('industry') industry?: string) {
-    if (industry) {
+  getCareers(@Query('industry_id') industryId?: string) {
+    if (industryId) {
       return this.careersService.getCareersByIndustry(
-        normalizeIndustry(industry),
+        Number(industryId),
       );
     }
     return this.careersService.getCareers();
@@ -112,7 +83,7 @@ export class CareersController {
     body: {
       title?: string;
       description?: string;
-      industry?: string;
+      industry_id?: number;
 
       minSalary?: number;
       maxSalary?: number;
@@ -127,9 +98,8 @@ export class CareersController {
     return this.careersService.updateCareer(Number(id), {
       ...(body.title && { title: body.title }),
       ...(body.description && { description: body.description }),
-      ...(body.industry && {
-        industry: normalizeIndustry(body.industry),
-      }),
+      ...(body.industry_id && { industry_id: body.industry_id }),
+
       ...(body.minSalary !== undefined && {
         min_salary: body.minSalary,
       }),

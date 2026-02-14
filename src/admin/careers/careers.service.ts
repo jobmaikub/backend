@@ -8,20 +8,20 @@ import { SupabaseService } from '../../supabase/supabase.service';
 interface CreateCareerData {
   title: string;
   description: string;
-  industry: string;
+  industry_id: number;
   min_salary?: number;
   max_salary?: number;
   growth_rate?: number;
   image_url?: string;
   required_skills?: string[];
   responsibilities?: string[];
-  interest: string; // ⭐ บังคับ
+  interest: string;
 }
 
 interface UpdateCareerData {
   title?: string;
   description?: string;
-  industry?: string;
+  industry_id?: number;
   min_salary?: number;
   max_salary?: number;
   growth_rate?: number;
@@ -35,48 +35,38 @@ interface UpdateCareerData {
 export class CareersService {
   constructor(
     private readonly supabaseService: SupabaseService,
-  ) {}
+  ) { }
 
+  /* ================= CREATE ================= */
   async createCareer(data: CreateCareerData) {
-    if (!data.interest || !data.interest.trim()) {
-      throw new BadRequestException('interest is required');
-    }
 
     const { data: result, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('careers')
-        .insert({
-          ...data,
-          interest: data.interest.trim(),
-        })
-        .select()
+        .insert(data)
+        .select(`
+        *,
+        industries(name)
+      `)
         .single();
 
     if (error) {
       throw new BadRequestException(error.message);
     }
 
-    return result;
+    return this.mapCareer(result);
   }
 
+  /* ================= GET ALL ================= */
   async getCareers() {
     const { data, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('careers')
         .select(`
-          career_id,
-          title,
-          description,
-          industry,
-          min_salary,
-          max_salary,
-          growth_rate,
-          image_url,
-          required_skills,
-          responsibilities,
-          interest
+          *,
+          industries(name)
         `)
         .order('career_id', { ascending: true });
 
@@ -84,26 +74,18 @@ export class CareersService {
       throw new NotFoundException(error.message);
     }
 
-    return data;
+    return data.map(this.mapCareer);
   }
 
+  /* ================= GET BY ID ================= */
   async getCareerById(careerId: number) {
     const { data, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('careers')
         .select(`
-          career_id,
-          title,
-          description,
-          industry,
-          min_salary,
-          max_salary,
-          growth_rate,
-          image_url,
-          required_skills,
-          responsibilities,
-          interest
+          *,
+          industries(name)
         `)
         .eq('career_id', careerId)
         .single();
@@ -112,42 +94,33 @@ export class CareersService {
       throw new NotFoundException('Career not found');
     }
 
-    return data;
+    return this.mapCareer(data);
   }
 
-  async getCareersByIndustry(industry: string) {
+  /* ================= FILTER BY INDUSTRY ================= */
+  async getCareersByIndustry(industryId: number) {
+
     const { data, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('careers')
         .select(`
-          career_id,
-          title,
-          description,
-          industry,
-          min_salary,
-          max_salary,
-          growth_rate,
-          image_url,
-          required_skills,
-          responsibilities,
-          interest
-        `)
-        .eq('industry', industry)
-        .order('career_id', { ascending: true });
+        *,
+        industries(name)
+      `)
+        .eq('industry_id', industryId);
 
     if (error) {
       throw new NotFoundException(error.message);
     }
 
-    return data;
+    return data.map(this.mapCareer);
   }
 
-  async updateCareer(
-    careerId: number,
-    data: UpdateCareerData,
-  ) {
-    const payload = {
+  /* ================= UPDATE ================= */
+  async updateCareer(careerId: number, data: UpdateCareerData) {
+
+    const payload: any = {
       ...data,
       ...(data.interest && {
         interest: data.interest.trim(),
@@ -160,7 +133,10 @@ export class CareersService {
         .from('careers')
         .update(payload)
         .eq('career_id', careerId)
-        .select()
+        .select(`
+        *,
+        industries(name)
+      `)
         .single();
 
     if (error || !result) {
@@ -169,9 +145,10 @@ export class CareersService {
       );
     }
 
-    return result;
+    return this.mapCareer(result);
   }
 
+  /* ================= DELETE ================= */
   async deleteCareer(careerId: number) {
     const { error } =
       await this.supabaseService.client
@@ -185,5 +162,14 @@ export class CareersService {
     }
 
     return { success: true };
+  }
+
+  /* ================= HELPER ================= */
+  private mapCareer(row: any) {
+    return {
+      ...row,
+      industry: row.industries?.name || null,
+      industries: undefined,
+    };
   }
 }
