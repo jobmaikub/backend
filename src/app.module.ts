@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 
 import { SupabaseModule } from './supabase/supabase.module';
+import { HomeModule } from './modules/home/home.module';
 
 import { CareersModule } from './admin/careers/careers.module';
 import { CoursesModule } from './admin/courses/courses.module';
@@ -21,9 +22,10 @@ import { IndustriesModule } from './admin/industries/industries.module'; // ✅ 
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'],
     }),
     SupabaseModule,
+    HomeModule,
     CareersModule,
     CoursesModule,
     FacultiesModule,
@@ -35,7 +37,7 @@ import { IndustriesModule } from './admin/industries/industries.module'; // ✅ 
     UserReportsModule,
     BanUsersModule,
     InterestsModule,
-    IndustriesModule, 
+    IndustriesModule,
   ],
   controllers: [AppController],
 })
