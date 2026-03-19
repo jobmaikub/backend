@@ -108,11 +108,11 @@ export class AiService {
           .in('career_id', careerIds);
         if (csm) careerSkillsMap = csm;
 
-        // Also fetch from careers table to get required_skills column
+        // Also fetch from careers table to get required_skills, image_url, and industry name
         const { data: cdb } = await this.supabase.client
           .schema('admin')
           .from('careers')
-          .select('career_id, required_skills')
+          .select('career_id, required_skills, image_url, industries(name)')
           .in('career_id', careerIds);
         if (cdb) careersFromDb = cdb;
       }
@@ -158,6 +158,13 @@ export class AiService {
         cSkillNames.push(...requiredSkillsDict.filter(s => cSkillIds.includes(s.skill_id)).map(s => s.name));
 
         const dbCareer = careersFromDb.find(c => c.career_id === cId);
+        
+        // Ensure image_url and industry are passed to the frontend
+        if (dbCareer) {
+          career.image_url = dbCareer.image_url;
+          career.industry = dbCareer.industries?.name || null;
+        }
+
         const combinedRequired = [
           ...(Array.isArray(career.required_skills) ? career.required_skills : []),
           ...(dbCareer && Array.isArray(dbCareer.required_skills) ? dbCareer.required_skills : [])
