@@ -34,4 +34,9 @@ export class AiController {
   async aiMatch(@Body() user) {
     return this.aiService.getCareerMatch(user);
   }
+
+  @Get('history/:userId')
+  async getHistory(@Param('userId') userId: string) {
+    return this.aiService.getLatestMatches(userId);
+  }
 }

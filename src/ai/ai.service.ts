@@ -42,7 +42,7 @@ export class AiService {
     // Format the response slightly to make it easier for the frontend
     return {
       ...data,
-      industry: data.industries?.name || null,
+      industry: data.industries?.[0]?.name || null,
       industries: undefined
     };
   }
@@ -162,7 +162,7 @@ export class AiService {
         // Ensure image_url and industry are passed to the frontend
         if (dbCareer) {
           career.image_url = dbCareer.image_url;
-          career.industry = dbCareer.industries?.name || null;
+          career.industry = dbCareer.industries?.[0]?.name || null;
         }
 
         const combinedRequired = [
@@ -216,6 +216,65 @@ export class AiService {
       }
     }
 
+    // 4. บันทึกลงประวัติ (ถ้ามี user_id)
+    if (user.user_id && results.length > 0) {
+      const top3 = results.slice(0, 3);
+      
+      // ลบประวัติเก่า
+      await this.supabase.client
+        .from('user_ai_results')
+        .delete()
+        .eq('user_id', user.user_id);
+
+      // บันทึกใหม่ พร้อมเก็บ skills
+      const inserts = top3.map(res => ({
+        user_id: user.user_id,
+        career_id: res.career_id || res.id,
+        score: res.match_score || res.score,
+        explanation: res.explanation,
+        matching_skills: res.matching_skills || [],
+        skills_to_develop: res.skills_to_develop || []
+      }));
+
+      await this.supabase.client
+        .from('user_ai_results')
+        .insert(inserts);
+    }
+
     return results;
+  }
+
+  async getLatestMatches(userId: string) {
+    const { data: matches, error } = await this.supabase.client
+      .from('user_ai_results')
+      .select('career_id, score, explanation, matching_skills, skills_to_develop')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (error || !matches || matches.length === 0) return [];
+
+    const careerIds = matches.map(m => m.career_id);
+    const { data: dbDetails } = await this.supabase.client
+      .schema('admin')
+      .from('careers')
+      .select('career_id, title, description, image_url, industries(name)')
+      .in('career_id', careerIds);
+
+    return matches.map(m => {
+      const db = dbDetails?.find(d => d.career_id === m.career_id);
+      return {
+        career_id: m.career_id,
+        title: db?.title || 'Unknown',
+        explanation: m.explanation,
+        description: db?.description,
+        matching_skills: m.matching_skills || [],
+        skills_to_develop: m.skills_to_develop || [],
+        match_score: m.score,
+        score: m.score,
+        image_url: db?.image_url,
+        industry: db?.industries?.[0]?.name || null
+      };
+    });
   }
 }
