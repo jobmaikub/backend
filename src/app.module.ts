@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
-
+import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
 
 import { CareersModule } from './admin/careers/careers.module';
@@ -15,10 +15,11 @@ import { SkillsModule } from './admin/skills/skills.module';
 import { UsersModule } from './admin/users/users.module';
 import { UserReportsModule } from './admin/user_reports/user_reports.module';
 import { BanUsersModule } from './admin/ban_users/ban_users.module';
-import { IndustriesModule } from './admin/industries/industries.module'; // ✅ เพิ่ม
+import { IndustriesModule } from './admin/industries/industries.module';
 import { JobPathAllCareerModule } from './progresss/job_path_all_career/job_path_all_career.module';
 import { JobPathCareerModule } from './progresss/job_path_career/job_path_career.module';
 import { JobPathLessonModule } from './progresss/job_path_lesson/job_path_lesson.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -41,8 +42,10 @@ import { JobPathLessonModule } from './progresss/job_path_lesson/job_path_lesson
     IndustriesModule,
     JobPathAllCareerModule,
     JobPathCareerModule,
-    JobPathLessonModule, 
+    JobPathLessonModule,
+    AiModule,
   ],
   controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule { }
