@@ -8,13 +8,13 @@ import { SupabaseService } from '../../supabase/supabase.service';
 type CoursePayload = {
   title?: string;
   description?: string;
-  career_path?: string;
   level?: string;
   duration?: number;
   external_url?: string;
   course_order?: number;
   skills_taught?: string[];
-  learning_outcome?: string;
+  learning_outcome?: string[];
+  career_id?: number;
 };
 
 @Injectable()
@@ -23,30 +23,17 @@ export class CoursesService {
     private readonly supabaseService: SupabaseService,
   ) { }
 
-  private normalizeEnum(value?: string) {
-    if (!value) return undefined;
-
-    return value
-      .trim()
-      .replace(/\s+/g, '')        // UX Designer → UXDesigner
-      .replace(/_/g, '')          // กันพลาด
-  }
-
-
   private normalizeLevel(value?: string) {
     if (!value) return undefined;
     return value.toLowerCase().trim();
   }
 
-
   async createCourse(data: CoursePayload) {
     const payload: CoursePayload = {
       ...data,
-      career_path: this.normalizeEnum(data.career_path),
       level: this.normalizeLevel(data.level),
-      skills_taught: Array.isArray(data.skills_taught)
-        ? data.skills_taught
-        : [],
+      skills_taught: Array.isArray(data.skills_taught) ? data.skills_taught : [],
+      learning_outcome: Array.isArray(data.learning_outcome) ? data.learning_outcome : [],
     };
 
     const { data: result, error } =
@@ -70,18 +57,34 @@ export class CoursesService {
           course_id,
           title,
           description,
-          career_path,
           level,
-          duration,
+          duration_mins,
           external_url,
           course_order,
+          image_url,
           skills_taught,
-          learning_outcome
+          learning_outcome,
+          career_id,
+          careers (
+            career_id,
+            title
+          )
         `)
         .order('course_order', { ascending: true });
 
     if (error) throw new NotFoundException(error.message);
-    return data;
+    // Rename image_url to course_image for frontend compatibility
+    return data?.map((course: any) => {
+      const careerTitle = Array.isArray(course.careers)
+        ? course.careers[0]?.title
+        : course.careers?.title;
+      
+      return {
+        ...course,
+        course_image: course.image_url,
+        career_name: careerTitle || `Career #${course.career_id}`
+      };
+    });
   }
 
   async getCourseById(courseId: number) {
@@ -97,14 +100,20 @@ export class CoursesService {
       throw new NotFoundException('Course not found');
     }
 
-    return data;
+    // Rename image_url to course_image for frontend compatibility
+    return {
+      ...data,
+      course_image: data.image_url
+    };
   }
 
   async updateCourse(courseId: number, data: CoursePayload) {
     console.log('RAW DATA:', data);
 
     const payload = {
-      career_path: this.normalizeEnum(data.career_path),
+      title: data.title,
+      description: data.description,
+      career_id: data.career_id,
       level: this.normalizeLevel(data.level),
       duration: data.duration,
       external_url: data.external_url,

@@ -10,8 +10,8 @@ export class MajorsService {
   constructor(private readonly supabase: SupabaseService) { }
 
   async create(data: {
-    name: string;
-    name_th?: string;
+    eng_name: string;
+    th_name?: string;
     description?: string;
     faculty_id: number;
   }) {
@@ -57,8 +57,8 @@ export class MajorsService {
   async update(
     id: number,
     data: Partial<{
-      name: string;
-      name_th?: string;
+      eng_name: string;
+      th_name?: string;
       description?: string;
       faculty_id?: number;
     }>

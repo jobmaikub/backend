@@ -15,7 +15,7 @@ export class LessonsService {
     title: string;
     course_id: number;
     lesson_order: number;
-    duration?: number;
+    duration_mins?: number;
     external_url?: string;
   }) {
     const { data: result, error } =
@@ -35,18 +35,7 @@ export class LessonsService {
       await this.supabaseService.client
         .schema('admin')  
         .from('lessons')
-        .select(`
-          lesson_id,
-          title,
-          lesson_order,
-          duration,
-          external_url,
-          course_id,
-          courses (
-            course_id,
-            title
-          )
-        `)
+        .select('*')
         .order('lesson_order', { ascending: true });
 
     if (error) throw new NotFoundException(error.message);
@@ -58,18 +47,7 @@ export class LessonsService {
       await this.supabaseService.client
         .schema('admin')  
         .from('lessons')
-        .select(`
-          lesson_id,
-          title,
-          lesson_order,
-          duration,
-          external_url,
-          course_id,
-          courses (
-            course_id,
-            title
-          )
-        `)
+        .select('*')
         .eq('lesson_id', lessonId)
         .single();
 
@@ -99,7 +77,7 @@ export class LessonsService {
       title?: string;
       course_id?: number;
       lesson_order?: number;
-      duration?: number;
+      duration_mins?: number;
       external_url?: string;
     },
   ) {

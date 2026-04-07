@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 
-@Controller('courses')
+@Controller('admin/courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
@@ -20,25 +20,23 @@ export class CoursesController {
     body: {
       title?: string;
       description?: string;
-      career_path?: any;
-      level?: any;
+      level?: string;
       duration?: number;
       external_url?: string;
       course_order?: number;
       skills_taught?: string[];
-      learning_outcome?: string; // ✅ เพิ่ม
+      learning_outcome?: string[];
+      career_id?: number;
     },
   ) {
-    console.log("CREATE COURSE BODY:", body);
     return this.coursesService.createCourse(body);
   }
 
   @Get()
   getCourses(
-    @Query('career_path') career_path?: string,
+    @Query('career_id') career_id?: string,
     @Query('level') level?: string,
   ) {
-    // future filter
     return this.coursesService.getCourses();
   }
 
@@ -54,13 +52,13 @@ export class CoursesController {
     body: {
       title?: string;
       description?: string;
-      career_path?: any;
-      level?: any;
+      level?: string;
       duration?: number;
       external_url?: string;
       course_order?: number;
       skills_taught?: string[];
-      learning_outcome?: string; // ✅ เพิ่ม
+      learning_outcome?: string[];
+      career_id?: number;
     },
   ) {
     return this.coursesService.updateCourse(Number(id), body);

@@ -1,7 +1,7 @@
 import { Controller, Delete, Patch, Param, Body, Post, Get } from '@nestjs/common';
 import { NewsService } from './news.service';
 
-@Controller('news')
+@Controller('admin/news')
 export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
@@ -11,7 +11,7 @@ export class NewsController {
     body: {
       title: string;
       summary: string;
-      industry: any;
+      industry_id?: number;
       image_url: string;
       source_url: string;
       source_name: string;
@@ -37,7 +37,7 @@ export class NewsController {
     body: {
       title?: string;
       summary?: string;
-      industry?: any;
+      industry_id?: number;
       image_url?: string;
       source_url?: string;
       source_name?: string;

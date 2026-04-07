@@ -12,13 +12,13 @@ export class BanUsersService {
   ) { }
 
   async banUser(data: {
-    user_id: number;
+    user_id: string;
     reason: string;
     unban_date?: string;
+    created_by?: string;
   }) {
     const { data: activeBan } =
       await this.supabaseService.client
-        .schema('admin')
         .from('ban_users')
         .select('*')
         .eq('user_id', data.user_id)
@@ -31,23 +31,23 @@ export class BanUsersService {
 
     const { data: result, error } =
       await this.supabaseService.client
-        .schema('admin')
         .from('ban_users')
         .insert({
           user_id: data.user_id,
           reason: data.reason,
           unban_date: data.unban_date ?? null,
+          created_by: data.created_by ?? null,
         })
         .select()
         .single();
 
     if (error) throw new BadRequestException(error.message);
 
+    // Update public.profiles.is_banned = true
     await this.supabaseService.client
-      .schema('admin')
-      .from('users')
-      .update({ status: 'ban' })
-      .eq('user_id', data.user_id);
+      .from('profiles')
+      .update({ is_banned: true })
+      .eq('id', data.user_id);
 
     return result;
   }
@@ -55,7 +55,6 @@ export class BanUsersService {
   async getBans() {
     const { data, error } =
       await this.supabaseService.client
-        .schema('admin')
         .from('ban_users')
         .select('*')
         .order('ban_date', { ascending: false });
@@ -64,10 +63,9 @@ export class BanUsersService {
     return data;
   }
 
-  async getBanById(banId: number) {
+  async getBanById(banId: string) {
     const { data, error } =
       await this.supabaseService.client
-        .schema('admin')
         .from('ban_users')
         .select('*')
         .eq('ban_id', banId)
@@ -80,10 +78,9 @@ export class BanUsersService {
     return data;
   }
 
-  async getBansByUserId(userId: number) {
+  async getBansByUserId(userId: string) {
     const { data, error } =
       await this.supabaseService.client
-        .schema('admin')
         .from('ban_users')
         .select('*')
         .eq('user_id', userId)
@@ -97,10 +94,9 @@ export class BanUsersService {
     return data;
   }
 
-  async getActiveBanByUserId(userId: number) {
+  async getActiveBanByUserId(userId: string) {
     const { data, error } =
       await this.supabaseService.client
-        .schema('admin')
         .from('ban_users')
         .select('*')
         .eq('user_id', userId)
@@ -118,12 +114,11 @@ export class BanUsersService {
     return data;
   }
 
-  async unbanUserByUserId(userId: number) {
+  async unbanUserByUserId(userId: string) {
     const today = new Date().toISOString().slice(0, 10);
 
     const { data: activeBan, error: findError } =
       await this.supabaseService.client
-        .schema('admin')
         .from('ban_users')
         .select('*')
         .eq('user_id', userId)
@@ -140,7 +135,6 @@ export class BanUsersService {
 
     const { data: ban, error: updateError } =
       await this.supabaseService.client
-        .schema('admin')
         .from('ban_users')
         .update({ unban_date: today })
         .eq('ban_id', activeBan.ban_id)
@@ -151,19 +145,18 @@ export class BanUsersService {
       throw new NotFoundException('Ban record not found');
     }
 
+    // Update public.profiles.is_banned = false
     await this.supabaseService.client
-      .schema('admin')
-      .from('users')
-      .update({ status: 'unban' })
-      .eq('user_id', userId);
+      .from('profiles')
+      .update({ is_banned: false })
+      .eq('id', userId);
 
     return ban;
   }
 
-  async deleteBan(banId: number) {
+  async deleteBan(banId: string) {
     const { error } =
       await this.supabaseService.client
-        .schema('admin')
         .from('ban_users')
         .delete()
         .eq('ban_id', banId);

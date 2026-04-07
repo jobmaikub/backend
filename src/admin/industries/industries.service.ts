@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 @Injectable()
@@ -13,7 +13,22 @@ export class IndustriesService {
         .select('*')
         .order('industry_id');
 
-    if (error) throw error;
+    if (error) throw new NotFoundException(error.message);
+    return data;
+  }
+
+  async getIndustryById(industryId: number) {
+    const { data, error } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('industries')
+        .select('*')
+        .eq('industry_id', industryId)
+        .single();
+
+    if (error || !data) {
+      throw new NotFoundException('Industry not found');
+    }
 
     return data;
   }

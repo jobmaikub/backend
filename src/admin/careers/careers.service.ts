@@ -9,26 +9,28 @@ interface CreateCareerData {
   title: string;
   description: string;
   industry_id: number;
+  major_id?: number;
   min_salary?: number;
   max_salary?: number;
   growth_rate?: number;
   image_url?: string;
   required_skills?: string[];
   responsibilities?: string[];
-  interest: string;
+  duration?: number;
 }
 
 interface UpdateCareerData {
   title?: string;
   description?: string;
   industry_id?: number;
+  major_id?: number;
   min_salary?: number;
   max_salary?: number;
   growth_rate?: number;
   image_url?: string;
   required_skills?: string[];
   responsibilities?: string[];
-  interest?: string;
+  duration?: number;
 }
 
 @Injectable()
@@ -119,12 +121,8 @@ export class CareersService {
 
   /* ================= UPDATE ================= */
   async updateCareer(careerId: number, data: UpdateCareerData) {
-
     const payload: any = {
       ...data,
-      ...(data.interest && {
-        interest: data.interest.trim(),
-      }),
     };
 
     const { data: result, error } =
@@ -164,12 +162,113 @@ export class CareersService {
     return { success: true };
   }
 
+  /* ================= CAREER SKILLS ================= */
+  async getCareerSkills(careerId: number) {
+    const { data, error } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('career_skills')
+        .select(`
+          skill_id,
+          skills(skill_id, skill_name, category)
+        `)
+        .eq('career_id', careerId);
+
+    if (error) {
+      throw new NotFoundException(error.message);
+    }
+
+    return data || [];
+  }
+
+  async addCareerSkill(careerId: number, skillId: number) {
+    const { data, error } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('career_skills')
+        .insert({ career_id: careerId, skill_id: skillId })
+        .select()
+        .single();
+
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
+
+    return data;
+  }
+
+  async removeCareerSkill(careerId: number, skillId: number) {
+    const { error } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('career_skills')
+        .delete()
+        .eq('career_id', careerId)
+        .eq('skill_id', skillId);
+
+    if (error) {
+      throw new NotFoundException(error.message);
+    }
+
+    return { success: true };
+  }
+
+  /* ================= CAREER INTERESTS ================= */
+  async getCareerInterests(careerId: number) {
+    const { data, error } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('career_interests')
+        .select(`
+          interest_id,
+          interests(interest_id, interest_name)
+        `)
+        .eq('career_id', careerId);
+
+    if (error) {
+      throw new NotFoundException(error.message);
+    }
+
+    return data || [];
+  }
+
+  async addCareerInterest(careerId: number, interestId: number) {
+    const { data, error } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('career_interests')
+        .insert({ career_id: careerId, interest_id: interestId })
+        .select()
+        .single();
+
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
+
+    return data;
+  }
+
+  async removeCareerInterest(careerId: number, interestId: number) {
+    const { error } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('career_interests')
+        .delete()
+        .eq('career_id', careerId)
+        .eq('interest_id', interestId);
+
+    if (error) {
+      throw new NotFoundException(error.message);
+    }
+
+    return { success: true };
+  }
+
   /* ================= HELPER ================= */
   private mapCareer(row: any) {
     return {
       ...row,
-      industry: row.industries?.name || null,
-      industries: undefined,
+      industries: row.industries || null,
     };
   }
 }

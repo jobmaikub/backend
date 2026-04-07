@@ -14,7 +14,7 @@ export class NewsService {
   async createNews(data: {
     title: string;
     summary: string;
-    industry: any;
+    industry_id?: number;
     image_url: string;
     source_url: string;
     source_name: string;
@@ -36,7 +36,10 @@ export class NewsService {
       await this.supabaseService.client
         .schema('admin')
         .from('news')
-        .select('*')
+        .select(`
+          *,
+          industries(name)
+        `)
         .order('news_id', { ascending: false });
 
     if (error) throw new NotFoundException(error.message);
@@ -64,7 +67,7 @@ export class NewsService {
     data: {
       title?: string;
       summary?: string;
-      industry?: any;
+      industry_id?: number;
       image_url?: string;
       source_url?: string;
       source_name?: string;
