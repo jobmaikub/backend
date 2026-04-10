@@ -8,13 +8,15 @@ import { SupabaseService } from '../../supabase/supabase.service';
 type CoursePayload = {
   title?: string;
   description?: string;
+  career_path?: string;
   level?: string;
-  duration?: number;
+  duration_mins?: number;
   external_url?: string;
   course_order?: number;
   skills_taught?: string[];
   learning_outcome?: string[];
   career_id?: number;
+  image_url?: string;
 };
 
 @Injectable()
@@ -29,12 +31,23 @@ export class CoursesService {
   }
 
   async createCourse(data: CoursePayload) {
-    const payload: CoursePayload = {
-      ...data,
+    const payload = {
+      title: data.title,
+      description: data.description,
+      career_id: data.career_id,
+      career_path: data.career_path,
       level: this.normalizeLevel(data.level),
+      duration_mins: data.duration_mins ?? 0,
+      external_url: data.external_url,
+      course_order: data.course_order,
+      image_url: data.image_url,
       skills_taught: Array.isArray(data.skills_taught) ? data.skills_taught : [],
       learning_outcome: Array.isArray(data.learning_outcome) ? data.learning_outcome : [],
     };
+
+    Object.keys(payload).forEach(
+      (key) => (payload as any)[key] === undefined && delete (payload as any)[key]
+    );
 
     const { data: result, error } =
       await this.supabaseService.client
@@ -57,6 +70,7 @@ export class CoursesService {
           course_id,
           title,
           description,
+          career_path,
           level,
           duration_mins,
           external_url,
@@ -73,7 +87,6 @@ export class CoursesService {
         .order('course_order', { ascending: true });
 
     if (error) throw new NotFoundException(error.message);
-    // Rename image_url to course_image for frontend compatibility
     return data?.map((course: any) => {
       const careerTitle = Array.isArray(course.careers)
         ? course.careers[0]?.title
@@ -81,7 +94,7 @@ export class CoursesService {
       
       return {
         ...course,
-        course_image: course.image_url,
+        career_path: course.career_path,
         career_name: careerTitle || `Career #${course.career_id}`
       };
     });
@@ -100,29 +113,23 @@ export class CoursesService {
       throw new NotFoundException('Course not found');
     }
 
-    // Rename image_url to course_image for frontend compatibility
-    return {
-      ...data,
-      course_image: data.image_url
-    };
+    return data;
   }
 
   async updateCourse(courseId: number, data: CoursePayload) {
-    console.log('RAW DATA:', data);
-
     const payload = {
       title: data.title,
       description: data.description,
       career_id: data.career_id,
+      career_path: data.career_path,
       level: this.normalizeLevel(data.level),
-      duration: data.duration,
+      duration_mins: data.duration_mins,
       external_url: data.external_url,
       course_order: data.course_order,
+      image_url: data.image_url,
       skills_taught: data.skills_taught,
       learning_outcome: data.learning_outcome,
     };
-
-    console.log('FINAL PAYLOAD:', payload);
 
     Object.keys(payload).forEach(
       (key) => payload[key] === undefined && delete payload[key]

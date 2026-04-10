@@ -20,13 +20,15 @@ export class CoursesController {
     body: {
       title?: string;
       description?: string;
+      career_path?: string;
       level?: string;
-      duration?: number;
+      duration_mins?: number;
       external_url?: string;
       course_order?: number;
       skills_taught?: string[];
       learning_outcome?: string[];
       career_id?: number;
+      image_url?: string;
     },
   ) {
     return this.coursesService.createCourse(body);
@@ -52,13 +54,15 @@ export class CoursesController {
     body: {
       title?: string;
       description?: string;
+      career_path?: string;
       level?: string;
-      duration?: number;
+      duration_mins?: number;
       external_url?: string;
       course_order?: number;
       skills_taught?: string[];
       learning_outcome?: string[];
       career_id?: number;
+      image_url?: string;
     },
   ) {
     return this.coursesService.updateCourse(Number(id), body);

@@ -6,6 +6,7 @@ import {
 import { SupabaseService } from '../../supabase/supabase.service';
 
 interface CreateCareerData {
+  career_id?: number;
   title: string;
   description: string;
   industry_id: number;
@@ -41,12 +42,39 @@ export class CareersService {
 
   /* ================= CREATE ================= */
   async createCareer(data: CreateCareerData) {
+    const { data: lastRows, error: lastRowsError } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('careers')
+        .select('career_id')
+        .order('career_id', { ascending: false })
+        .limit(1);
+
+    if (lastRowsError) {
+      throw new BadRequestException(lastRowsError.message);
+    }
+
+    const nextCareerId = (Array.isArray(lastRows) && lastRows.length > 0)
+      ? Number(lastRows[0].career_id) + 1
+      : 1;
+
+    const payload: CreateCareerData = {
+      ...data,
+      career_id: nextCareerId,
+      min_salary: data.min_salary ?? 0,
+      max_salary: data.max_salary ?? 0,
+      growth_rate: data.growth_rate ?? 1,
+      image_url: data.image_url ?? '',
+      required_skills: data.required_skills ?? [],
+      responsibilities: data.responsibilities ?? [],
+      duration: data.duration ?? 0,
+    };
 
     const { data: result, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('careers')
-        .insert(data)
+        .insert(payload)
         .select(`
         *,
         industries(name)
@@ -148,6 +176,44 @@ export class CareersService {
 
   /* ================= DELETE ================= */
   async deleteCareer(careerId: number) {
+    const { error: deleteSkillLinksError } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('career_skills')
+        .delete()
+        .eq('career_id', careerId);
+
+    if (deleteSkillLinksError) {
+      throw new BadRequestException(deleteSkillLinksError.message);
+    }
+
+    const { error: deleteInterestLinksError } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('career_interests')
+        .delete()
+        .eq('career_id', careerId);
+
+    if (deleteInterestLinksError) {
+      throw new BadRequestException(deleteInterestLinksError.message);
+    }
+
+    const { data: linkedCourses, error: linkedCoursesError } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('courses')
+        .select('course_id')
+        .eq('career_id', careerId)
+        .limit(1);
+
+    if (linkedCoursesError) {
+      throw new BadRequestException(linkedCoursesError.message);
+    }
+
+    if (Array.isArray(linkedCourses) && linkedCourses.length > 0) {
+      throw new BadRequestException('Cannot delete career with linked courses. Please delete related courses first.');
+    }
+
     const { error } =
       await this.supabaseService.client
         .schema('admin')
@@ -156,7 +222,7 @@ export class CareersService {
         .eq('career_id', careerId);
 
     if (error) {
-      throw new NotFoundException(error.message);
+      throw new BadRequestException(error.message);
     }
 
     return { success: true };
@@ -170,7 +236,7 @@ export class CareersService {
         .from('career_skills')
         .select(`
           skill_id,
-          skills(skill_id, skill_name, category)
+          skills(skill_id, name, category)
         `)
         .eq('career_id', careerId);
 

@@ -13,17 +13,28 @@ export class NewsService {
 
   async createNews(data: {
     title: string;
-    summary: string;
+    description: string;
     industry_id?: number;
     image_url: string;
     source_url: string;
     source_name: string;
+    date?: string;
   }) {
+    const payload = {
+      title: data.title,
+      description: data.description.trim(),
+      industry_id: data.industry_id,
+      image_url: data.image_url,
+      source_url: data.source_url,
+      source_name: data.source_name,
+      date: data.date,
+    };
+
     const { data: result, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('news')
-        .insert(data)
+        .insert(payload)
         .select()
         .single();
 
@@ -66,18 +77,40 @@ export class NewsService {
     newsId: number,
     data: {
       title?: string;
-      summary?: string;
+      description?: string;
       industry_id?: number;
       image_url?: string;
       source_url?: string;
       source_name?: string;
+      date?: string;
     },
   ) {
+    const payload: {
+      title?: string;
+      description?: string;
+      industry_id?: number;
+      image_url?: string;
+      source_url?: string;
+      source_name?: string;
+      date?: string;
+    } = {
+      title: data.title,
+      industry_id: data.industry_id,
+      image_url: data.image_url,
+      source_url: data.source_url,
+      source_name: data.source_name,
+      date: data.date,
+    };
+
+    if (data.description !== undefined) {
+      payload.description = data.description.trim();
+    }
+
     const { data: result, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('news')
-        .update(data)
+        .update(payload)
         .eq('news_id', newsId)
         .select()
         .single();

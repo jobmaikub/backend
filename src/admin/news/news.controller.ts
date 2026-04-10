@@ -10,11 +10,12 @@ export class NewsController {
     @Body()
     body: {
       title: string;
-      summary: string;
+      description: string;
       industry_id?: number;
       image_url: string;
       source_url: string;
       source_name: string;
+      date?: string;
     },
   ) {
     return this.newsService.createNews(body);
@@ -36,11 +37,12 @@ export class NewsController {
     @Body()
     body: {
       title?: string;
-      summary?: string;
+      description?: string;
       industry_id?: number;
       image_url?: string;
       source_url?: string;
       source_name?: string;
+      date?: string;
     },
   ) {
     return this.newsService.updateNews(Number(id), body);
