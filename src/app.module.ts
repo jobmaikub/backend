@@ -22,6 +22,7 @@ import { JobPathLessonModule } from './progresss/job_path_lesson/job_path_lesson
 import { AiModule } from './ai/ai.module';
 import { OtpController } from './otp/otp.controller';
 import { OtpService } from './otp/otp.service';
+import { TrackProgressModule } from './progresss/track_progress/track_progress.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { OtpService } from './otp/otp.service';
     JobPathCareerModule,
     JobPathLessonModule,
     AiModule,
+    TrackProgressModule,
   ],
   controllers: [AppController, OtpController],
   providers: [AppService, OtpService],
