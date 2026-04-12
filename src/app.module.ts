@@ -4,6 +4,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
 
+// Import ของ News Cron Job
+import { ScheduleModule } from '@nestjs/schedule';
+import { NewsService } from './admin/news/news.service';
+
 import { CareersModule } from './admin/careers/careers.module';
 import { CoursesModule } from './admin/courses/courses.module';
 import { FacultiesModule } from './admin/faculties/faculties.module';
@@ -27,6 +31,7 @@ import { AiModule } from './ai/ai.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
     SupabaseModule,
     CareersModule,
     CoursesModule,
@@ -46,6 +51,6 @@ import { AiModule } from './ai/ai.module';
     AiModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, NewsService],
 })
 export class AppModule { }
