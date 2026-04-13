@@ -10,7 +10,7 @@ export class NewsController {
     @Body()
     body: {
       title: string;
-      summary: string;
+      description: string;
       industry_id: number;
       image_url: string;
       source_url: string;
@@ -26,10 +26,10 @@ export class NewsController {
   }
 
   @Get('search/query')
-  searchNews(@Query('q') query: string, @Query('industry_id') industry: string) {
+  searchNews(@Query('q') query: string, @Query('industry') industry?: string) {
     return this.newsService.searchNews(query, industry);
   }
- 
+
   @Get(':id')
   getNewsById(@Param('id') id: string) {
     return this.newsService.getNewsById(Number(id));
@@ -41,7 +41,7 @@ export class NewsController {
     @Body()
     body: {
       title?: string;
-      summary?: string;
+      description?: string;
       industry_id?: number;
       image_url?: string;
       source_url?: string;

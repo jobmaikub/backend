@@ -13,7 +13,7 @@ export class NewsService {
 
   async createNews(data: {
     title: string;
-    summary: string;
+    description: string;
     industry_id: number;
     image_url: string;
     source_url: string;
@@ -65,7 +65,6 @@ export class NewsService {
       (article.title?.toLowerCase() || '').includes(searchLower) ||
       (article.source_name?.toLowerCase() || '').includes(searchLower) ||
       (article.description?.toLowerCase() || '').includes(searchLower) ||
-      (article.summary?.toLowerCase() || '').includes(searchLower) ||
       (article.industry?.name?.toLowerCase() || '').includes(searchLower)
     );
 
@@ -99,7 +98,7 @@ export class NewsService {
     newsId: number,
     data: {
       title?: string;
-      summary?: string;
+      description?: string;
       industry_id?: number;
       image_url?: string;
       source_url?: string;
