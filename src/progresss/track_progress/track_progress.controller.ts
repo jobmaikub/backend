@@ -9,7 +9,7 @@ export class TrackProgressController {
   ) {}
 
   // 🔥 FIX USER ID ตรงนี้
-  private userId = '6b9560eb-8970-47ae-a5fc-81f5a7e96b98';
+  private userId = '8c995f8e-b515-485d-9d4a-435440076123';
 
   @Get('stats')
   getStats() {
