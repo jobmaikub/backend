@@ -1,7 +1,7 @@
 import { Controller, Delete, Patch, Param, Body, Post, Get } from '@nestjs/common';
 import { SkillsService } from './skills.service';
 
-@Controller('skills')
+@Controller('admin/skills')
 export class SkillsController {
   constructor(private readonly skillsService: SkillsService) { }
 

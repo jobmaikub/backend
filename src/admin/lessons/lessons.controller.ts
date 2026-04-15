@@ -1,7 +1,7 @@
 import { Controller, Delete, Patch, Param, Body, Post, Get, Query } from '@nestjs/common';
 import { LessonsService } from './lessons.service';
 
-@Controller('lessons')
+@Controller('admin/lessons')
 export class LessonsController {
   constructor(private readonly lessonsService: LessonsService) {}
 
@@ -12,7 +12,7 @@ export class LessonsController {
       title: string;
       course_id: number;
       lesson_order: number;
-      duration?: number;
+      duration_mins?: number;
       external_url?: string;
     },
   ) {
@@ -40,7 +40,7 @@ export class LessonsController {
       title?: string;
       course_id?: number;
       lesson_order?: number;
-      duration?: number;
+      duration_mins?: number;
       external_url?: string;
     },
   ) {

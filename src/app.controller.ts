@@ -1,14 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
-import { SupabaseService } from './supabase/supabase.service';
+import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
   constructor(
-    private readonly supabaseService: SupabaseService,
+    private readonly appService: AppService,
   ) {}
 
   @Get()
   getHello(): string {
-    return 'Hello World!';
+    return this.appService.getHello();
   }
 }

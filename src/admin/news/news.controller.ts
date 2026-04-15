@@ -1,7 +1,7 @@
 import { Controller, Delete, Patch, Param, Body, Post, Get, Query } from '@nestjs/common';
 import { NewsService } from './news.service';
 
-@Controller('news')
+@Controller('admin/news')
 export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
@@ -11,10 +11,11 @@ export class NewsController {
     body: {
       title: string;
       description: string;
-      industry_id: number;
+      industry_id?: number;
       image_url: string;
       source_url: string;
       source_name: string;
+      date?: string;
     },
   ) {
     return this.newsService.createNews(body);
@@ -46,6 +47,7 @@ export class NewsController {
       image_url?: string;
       source_url?: string;
       source_name?: string;
+      date?: string;
     },
   ) {
     return this.newsService.updateNews(Number(id), body);
