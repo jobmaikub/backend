@@ -59,6 +59,20 @@ export class UserReportsController {
     return this.service.updateReport(reportId, body);
   }
 
+  @Patch(':reportId/resolve-and-ban')
+  resolveAndBanReport(
+    @Param('reportId') reportId: string,
+    @Body()
+    body: {
+      resolved_by: string;
+      resolution_note?: string;
+      ban_reason?: string;
+      ban_until?: string;
+    },
+  ) {
+    return this.service.resolveAndBanReport(reportId, body);
+  }
+
   @Delete(':reportId')
   deleteReport(@Param('reportId') reportId: string) {
     return this.service.deleteReport(reportId);
