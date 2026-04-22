@@ -6,10 +6,14 @@ import {
   Delete,
   Param,
   Body,
+  UseGuards,
 } from '@nestjs/common';
 import { UserReportsService } from './user_reports.service';
+import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
+import { AdminGuard } from '../../auth/admin.guard';
 
-@Controller('user-reports')
+@Controller('admin/user-reports')
+@UseGuards(SupabaseAuthGuard, AdminGuard)
 export class UserReportsController {
   constructor(private readonly service: UserReportsService) {}
 
@@ -17,9 +21,10 @@ export class UserReportsController {
   createReport(
     @Body()
     body: {
-      by_user_id: number;
-      report_user_id: number;
+      by_user_id: string;
+      report_user_id: string;
       reason: string;
+      report_type?: string;
     },
   ) {
     return this.service.createReport(body);
@@ -30,24 +35,46 @@ export class UserReportsController {
     return this.service.getReports();
   }
 
-  @Get(':id')
-  getReportById(@Param('id') id: string) {
-    return this.service.getReportById(Number(id));
+  @Get('pending')
+  getPendingReports() {
+    return this.service.getPendingReports();
   }
 
-  @Patch(':id')
+  @Get(':reportId')
+  getReportById(@Param('reportId') reportId: string) {
+    return this.service.getReportById(reportId);
+  }
+
+  @Patch(':reportId')
   updateReport(
-    @Param('id') id: string,
+    @Param('reportId') reportId: string,
     @Body()
     body: {
+      status?: string;
       reason?: string;
+      resolved_by?: string;
+      resolution_note?: string;
     },
   ) {
-    return this.service.updateReport(Number(id), body);
+    return this.service.updateReport(reportId, body);
   }
 
-  @Delete(':id')
-  deleteReport(@Param('id') id: string) {
-    return this.service.deleteReport(Number(id));
+  @Patch(':reportId/resolve-and-ban')
+  resolveAndBanReport(
+    @Param('reportId') reportId: string,
+    @Body()
+    body: {
+      resolved_by: string;
+      resolution_note?: string;
+      ban_reason?: string;
+      ban_until?: string;
+    },
+  ) {
+    return this.service.resolveAndBanReport(reportId, body);
+  }
+
+  @Delete(':reportId')
+  deleteReport(@Param('reportId') reportId: string) {
+    return this.service.deleteReport(reportId);
   }
 }

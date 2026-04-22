@@ -1,40 +1,43 @@
-import { Controller, Delete, Patch, Param, Body, Post, Get } from '@nestjs/common';
+import { Controller, Patch, Param, Body, Post, Get, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
+import { AdminGuard } from '../../auth/admin.guard';
 
-@Controller('users')
+@Controller('admin/users')
+@UseGuards(SupabaseAuthGuard, AdminGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
-  @Post()
-  createUser(@Body() body: any) {
-    return this.usersService.createUser(body);
-  }
 
   @Get()
   getUsers() {
     return this.usersService.getUsers();
   }
 
-  @Get(':id')
-  getUserById(@Param('id') id: string) {
-    return this.usersService.getUserById(+id);
+  @Get(':userId')
+  getUserById(@Param('userId') userId: string) {
+    return this.usersService.getUserById(userId);
   }
 
-  @Patch(':id')
-  updateUser(@Param('id') id: string, @Body() body: any) {
-    return this.usersService.updateUser(+id, body);
-  }
-
-  @Patch(':id/status')
-  updateUserStatus(
-    @Param('id') id: string,
-    @Body('status') status: 'ban' | 'unban',
+  @Post(':userId/ban')
+  banUser(
+    @Param('userId') userId: string,
+    @Body('reason') reason: string,
   ) {
-    return this.usersService.updateUserStatus(+id, status);
+    return this.usersService.banUser(userId, reason);
   }
 
-  @Delete(':id')
-  deleteUser(@Param('id') id: string) {
-    return this.usersService.deleteUser(+id);
+  @Patch(':userId/unban')
+  unbanUser(@Param('userId') userId: string) {
+    return this.usersService.unbanUser(userId);
+  }
+
+  @Get(':userId/ban-history')
+  getUserBans(@Param('userId') userId: string) {
+    return this.usersService.getUserBans(userId);
+  }
+
+  @Get(':userId/reports')
+  getUserReports(@Param('userId') userId: string) {
+    return this.usersService.getUserReports(userId);
   }
 }

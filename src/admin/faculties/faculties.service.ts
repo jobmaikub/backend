@@ -12,10 +12,8 @@ export class FacultiesService {
   ) { }
 
   async createFaculty(data: {
-    name: string;
-    name_th?: string;
-    icon?: string;
-    theme_color?: string;
+    eng_name: string;
+    th_name?: string;
   }) {
     const { data: rpcData, error: idError } =
       await this.supabaseService.client.rpc('get_next_faculty_id');
@@ -37,7 +35,8 @@ export class FacultiesService {
         .from('faculties')
         .insert({
           faculty_id: nextFacultyId,
-          ...data,
+          eng_name: data.eng_name,
+          th_name: data.th_name || null,
         })
         .select()
         .single();
@@ -77,10 +76,8 @@ export class FacultiesService {
   async updateFaculty(
     facultyId: number,
     data: {
-      name?: string;
-      name_th?: string;
-      icon?: string;
-      theme_color?: string;
+      eng_name?: string;
+      th_name?: string;
     },
   ) {
     const { data: result, error } =
