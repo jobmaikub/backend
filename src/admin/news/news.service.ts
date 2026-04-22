@@ -185,8 +185,8 @@ export class NewsService {
   // ==========================================
 
   // Runs automatically every day at 8:00 AM
-  //@Cron(CronExpression.EVERY_DAY_AT_8AM)
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_DAY_AT_8AM)
+  //@Cron(CronExpression.EVERY_MINUTE)
   async fetchAndSaveAllNews() {
     this.logger.log('Starting daily news fetch for all JobMaikub industries...');
     const apiKey = process.env.GNEWS_API_KEY;
@@ -236,7 +236,11 @@ export class NewsService {
         }
 
       } catch (error) {
-        this.logger.error(`Failed process for ${industry.name}:`, error.message);
+        if (error instanceof Error) {
+          this.logger.error(`Failed process for ${industry.name}:`, error.message);
+        } else {
+          this.logger.error(`Failed process for ${industry.name}:`, 'Unknown error occurred');
+        }
       }
     }
     this.logger.log('Daily news fetch complete!');
