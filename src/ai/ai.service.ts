@@ -218,27 +218,28 @@ export class AiService {
 
     // 4. บันทึกลงประวัติ (ถ้ามี user_id)
     if (user.user_id && results.length > 0) {
-      const top3 = results.slice(0, 3);
-      
-      // ลบประวัติเก่า
-      await this.supabase.client
-        .from('user_ai_results')
-        .delete()
-        .eq('user_id', user.user_id);
+      const top3 = [...results]
+        .sort((a, b) => Number(b.match_score ?? b.score ?? 0) - Number(a.match_score ?? a.score ?? 0))
+        .slice(0, 3);
 
       // บันทึกใหม่ พร้อมเก็บ skills
       const inserts = top3.map(res => ({
         user_id: user.user_id,
         career_id: res.career_id || res.id,
-        score: res.match_score || res.score,
+        score: Number(res.match_score ?? res.score ?? 0),
         explanation: res.explanation,
         matching_skills: res.matching_skills || [],
         skills_to_develop: res.skills_to_develop || []
       }));
 
-      await this.supabase.client
+      const { error: insertError } = await this.supabase.client
         .from('user_ai_results')
         .insert(inserts);
+
+      if (insertError) {
+        console.error('Failed to insert AI results:', insertError);
+        throw insertError;
+      }
     }
 
     return results;
@@ -247,9 +248,9 @@ export class AiService {
   async getLatestMatches(userId: string) {
     const { data: matches, error } = await this.supabase.client
       .from('user_ai_results')
-      .select('career_id, score, explanation, matching_skills, skills_to_develop')
+      .select('id, career_id, score, explanation, matching_skills, skills_to_develop')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
       .limit(3);
 
     if (error || !matches || matches.length === 0) return [];
@@ -261,7 +262,7 @@ export class AiService {
       .select('career_id, title, description, image_url, industries(name)')
       .in('career_id', careerIds);
 
-    return matches.map(m => {
+    const mapped = matches.map(m => {
       const db = dbDetails?.find(d => d.career_id === m.career_id);
       return {
         career_id: m.career_id,
@@ -276,5 +277,7 @@ export class AiService {
         industry: db?.industries?.[0]?.name || null
       };
     });
+
+    return mapped.sort((a, b) => Number(b.match_score ?? b.score ?? 0) - Number(a.match_score ?? a.score ?? 0));
   }
 }

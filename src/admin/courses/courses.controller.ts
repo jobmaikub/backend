@@ -23,7 +23,6 @@ export class CoursesController {
       career_path?: string;
       level?: string;
       duration_mins?: number;
-      external_url?: string;
       course_order?: number;
       skills_taught?: string[];
       learning_outcome?: string[];
@@ -57,7 +56,6 @@ export class CoursesController {
       career_path?: string;
       level?: string;
       duration_mins?: number;
-      external_url?: string;
       course_order?: number;
       skills_taught?: string[];
       learning_outcome?: string[];

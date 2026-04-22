@@ -1,4 +1,4 @@
-import { Controller, Delete, Patch, Param, Body, Post, Get } from '@nestjs/common';
+import { Controller, Delete, Patch, Param, Body, Post, Get, Query } from '@nestjs/common';
 import { NewsService } from './news.service';
 
 @Controller('admin/news')
@@ -24,6 +24,11 @@ export class NewsController {
   @Get()
   getNews() {
     return this.newsService.getNews();
+  }
+
+  @Get('search/query')
+  searchNews(@Query('q') query: string, @Query('industry') industry?: string) {
+    return this.newsService.searchNews(query, industry);
   }
 
   @Get(':id')
