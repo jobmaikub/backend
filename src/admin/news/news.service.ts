@@ -22,17 +22,28 @@ export class NewsService {
 
   async createNews(data: {
     title: string;
-    summary: string;
-    industry: any;
+    description: string;
+    industry_id?: number;
     image_url: string;
     source_url: string;
     source_name: string;
+    date?: string;
   }) {
+    const payload = {
+      title: data.title,
+      description: data.description.trim(),
+      industry_id: data.industry_id,
+      image_url: data.image_url,
+      source_url: data.source_url,
+      source_name: data.source_name,
+      date: data.date,
+    };
+
     const { data: result, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('news')
-        .insert(data)
+        .insert(payload)
         .select()
         .single();
 
@@ -45,11 +56,49 @@ export class NewsService {
       await this.supabaseService.client
         .schema('admin')
         .from('news')
-        .select('*')
-        .order('news_id', { ascending: false });
+        .select(`
+          *,
+          industries(name)
+        `)
+        .order('news_id', { ascending: true });
 
     if (error) throw new NotFoundException(error.message);
     return data;
+  }
+
+  async searchNews(query: string, industry?: string) {
+    if (!query || query.trim() === '') {
+      return this.getNews();
+    }
+
+    // Get all news with industry info, then filter in memory
+    // This is simpler than trying to do complex OR queries in Supabase
+    const { data, error } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('news')
+        .select('*, industry:industry_id(name)')
+        .order('news_id', { ascending: true });
+
+    if (error) throw new NotFoundException(error.message);
+
+    // Filter in memory
+    const searchLower = query.toLowerCase();
+    let filtered = data.filter((article: any) =>
+      (article.title?.toLowerCase() || '').includes(searchLower) ||
+      (article.source_name?.toLowerCase() || '').includes(searchLower) ||
+      (article.description?.toLowerCase() || '').includes(searchLower) ||
+      (article.industry?.name?.toLowerCase() || '').includes(searchLower)
+    );
+
+    // Optional: filter by industry
+    if (industry && industry !== 'All Industries') {
+      filtered = filtered.filter(
+        (article: any) => article.industry?.name === industry
+      );
+    }
+
+    return filtered;
   }
 
   async getNewsById(newsId: number) {
@@ -57,7 +106,7 @@ export class NewsService {
       await this.supabaseService.client
         .schema('admin')
         .from('news')
-        .select('*')
+        .select('*, industry:industry_id(name)')
         .eq('news_id', newsId)
         .single();
 
@@ -72,20 +121,42 @@ export class NewsService {
     newsId: number,
     data: {
       title?: string;
-      summary?: string;
-      industry?: any;
+      description?: string;
+      industry_id?: number;
       image_url?: string;
       source_url?: string;
       source_name?: string;
+      date?: string;
     },
   ) {
+    const payload: {
+      title?: string;
+      description?: string;
+      industry_id?: number;
+      image_url?: string;
+      source_url?: string;
+      source_name?: string;
+      date?: string;
+    } = {
+      title: data.title,
+      industry_id: data.industry_id,
+      image_url: data.image_url,
+      source_url: data.source_url,
+      source_name: data.source_name,
+      date: data.date,
+    };
+
+    if (data.description !== undefined) {
+      payload.description = data.description.trim();
+    }
+
     const { data: result, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('news')
-        .update(data)
+        .update(payload)
         .eq('news_id', newsId)
-        .select()
+        .select('*, industry:industry_id(name)')
         .single();
 
     if (error || !result) {

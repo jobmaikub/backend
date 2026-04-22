@@ -24,6 +24,9 @@ import { JobPathAllCareerModule } from './progresss/job_path_all_career/job_path
 import { JobPathCareerModule } from './progresss/job_path_career/job_path_career.module';
 import { JobPathLessonModule } from './progresss/job_path_lesson/job_path_lesson.module';
 import { AiModule } from './ai/ai.module';
+import { OtpController } from './otp/otp.controller';
+import { OtpService } from './otp/otp.service';
+import { TrackProgressModule } from './progresss/track_progress/track_progress.module';
 
 @Module({
   imports: [
@@ -49,8 +52,9 @@ import { AiModule } from './ai/ai.module';
     JobPathCareerModule,
     JobPathLessonModule,
     AiModule,
+    TrackProgressModule,
   ],
-  controllers: [AppController],
-  providers: [AppService, NewsService],
+  controllers: [AppController, OtpController],
+  providers: [AppService, OtpService, NewsService],
 })
 export class AppModule { }

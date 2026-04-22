@@ -10,11 +10,12 @@ type CoursePayload = {
   description?: string;
   career_path?: string;
   level?: string;
-  duration?: number;
-  external_url?: string;
+  duration_mins?: number;
   course_order?: number;
   skills_taught?: string[];
-  learning_outcome?: string;
+  learning_outcome?: string[];
+  career_id?: number;
+  image_url?: string;
 };
 
 @Injectable()
@@ -23,31 +24,28 @@ export class CoursesService {
     private readonly supabaseService: SupabaseService,
   ) { }
 
-  private normalizeEnum(value?: string) {
-    if (!value) return undefined;
-
-    return value
-      .trim()
-      .replace(/\s+/g, '')        // UX Designer → UXDesigner
-      .replace(/_/g, '')          // กันพลาด
-  }
-
-
   private normalizeLevel(value?: string) {
     if (!value) return undefined;
     return value.toLowerCase().trim();
   }
 
-
   async createCourse(data: CoursePayload) {
-    const payload: CoursePayload = {
-      ...data,
-      career_path: this.normalizeEnum(data.career_path),
+    const payload = {
+      title: data.title,
+      description: data.description,
+      career_id: data.career_id,
+      career_path: data.career_path,
       level: this.normalizeLevel(data.level),
-      skills_taught: Array.isArray(data.skills_taught)
-        ? data.skills_taught
-        : [],
+      duration_mins: data.duration_mins ?? 0,
+      course_order: data.course_order,
+      image_url: data.image_url,
+      skills_taught: Array.isArray(data.skills_taught) ? data.skills_taught : [],
+      learning_outcome: Array.isArray(data.learning_outcome) ? data.learning_outcome : [],
     };
+
+    Object.keys(payload).forEach(
+      (key) => (payload as any)[key] === undefined && delete (payload as any)[key]
+    );
 
     const { data: result, error } =
       await this.supabaseService.client
@@ -72,16 +70,31 @@ export class CoursesService {
           description,
           career_path,
           level,
-          duration,
-          external_url,
+          duration_mins,
           course_order,
+          image_url,
           skills_taught,
-          learning_outcome
+          learning_outcome,
+          career_id,
+          careers (
+            career_id,
+            title
+          )
         `)
         .order('course_order', { ascending: true });
 
     if (error) throw new NotFoundException(error.message);
-    return data;
+    return data?.map((course: any) => {
+      const careerTitle = Array.isArray(course.careers)
+        ? course.careers[0]?.title
+        : course.careers?.title;
+      
+      return {
+        ...course,
+        career_path: course.career_path,
+        career_name: careerTitle || `Career #${course.career_id}`
+      };
+    });
   }
 
   async getCourseById(courseId: number) {
@@ -101,19 +114,18 @@ export class CoursesService {
   }
 
   async updateCourse(courseId: number, data: CoursePayload) {
-    console.log('RAW DATA:', data);
-
     const payload = {
-      career_path: this.normalizeEnum(data.career_path),
+      title: data.title,
+      description: data.description,
+      career_id: data.career_id,
+      career_path: data.career_path,
       level: this.normalizeLevel(data.level),
-      duration: data.duration,
-      external_url: data.external_url,
+      duration_mins: data.duration_mins,
       course_order: data.course_order,
+      image_url: data.image_url,
       skills_taught: data.skills_taught,
       learning_outcome: data.learning_outcome,
     };
-
-    console.log('FINAL PAYLOAD:', payload);
 
     Object.keys(payload).forEach(
       (key) => payload[key] === undefined && delete payload[key]

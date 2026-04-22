@@ -2,7 +2,7 @@ import { Controller, Delete, Patch, Param, Body, Post, Get } from '@nestjs/commo
 import { MajorsService } from './majors.service';
 import { ParseIntPipe } from '@nestjs/common';
 
-@Controller('majors')
+@Controller('admin/majors')
 export class MajorsController {
   constructor(private readonly service: MajorsService) {}
 
@@ -10,8 +10,8 @@ export class MajorsController {
   create(
     @Body()
     body: {
-      name: string;
-      name_th?: string;
+      eng_name: string;
+      th_name?: string;
       description?: string;
       faculty_id: number;
     }
@@ -29,8 +29,8 @@ export class MajorsController {
     @Param('id', ParseIntPipe) id: number,
     @Body()
     body: {
-      name?: string;
-      name_th?: string;
+      eng_name?: string;
+      th_name?: string;
       description?: string;
       faculty_id?: number;
     }
