@@ -33,7 +33,7 @@ import { TrackProgressModule } from './progresss/track_progress/track_progress.m
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: '.env',
     }),
     ScheduleModule.forRoot(),
     SupabaseModule,
