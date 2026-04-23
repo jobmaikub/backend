@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
+import { HomeModule } from './modules/home/home.module';
 
 // Import ของ News Cron Job
 import { ScheduleModule } from '@nestjs/schedule';
@@ -32,10 +33,11 @@ import { TrackProgressModule } from './progresss/track_progress/track_progress.m
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'],
     }),
     ScheduleModule.forRoot(),
     SupabaseModule,
+    HomeModule,
     CareersModule,
     CoursesModule,
     FacultiesModule,
