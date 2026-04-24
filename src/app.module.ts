@@ -15,10 +15,11 @@ import { SkillsModule } from './admin/skills/skills.module';
 import { UsersModule } from './admin/users/users.module';
 import { UserReportsModule } from './admin/user_reports/user_reports.module';
 import { BanUsersModule } from './admin/ban_users/ban_users.module';
-import { IndustriesModule } from './admin/industries/industries.module'; // ✅ เพิ่ม
+import { IndustriesModule } from './admin/industries/industries.module';
 import { JobPathAllCareerModule } from './progresss/job_path_all_career/job_path_all_career.module';
 import { JobPathCareerModule } from './progresss/job_path_career/job_path_career.module';
 import { JobPathLessonModule } from './progresss/job_path_lesson/job_path_lesson.module';
+import { LearningPathModule } from './progresss/LearningPath/LearningPath.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { JobPathLessonModule } from './progresss/job_path_lesson/job_path_lesson
     JobPathAllCareerModule,
     JobPathCareerModule,
     JobPathLessonModule, 
+    LearningPathModule,
   ],
   controllers: [AppController],
 })
