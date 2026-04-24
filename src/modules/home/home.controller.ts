@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { HomeService } from './home.service';
 
 @Controller('home')
@@ -26,8 +26,14 @@ export class HomeController {
   }
 
   @Get('industry-news')
-  getIndustryNews() {
-    return this.homeService.getIndustryNews();
+  getIndustryNews(
+    @Query('limit') limit?: string,
+    @Query('industry') industry?: string,
+  ) {
+    return this.homeService.getIndustryNews(
+      limit ? Number(limit) : 10,
+      industry,
+    );
   }
 
   @Get('industries')

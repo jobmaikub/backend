@@ -28,6 +28,7 @@ import { AiModule } from './ai/ai.module';
 import { OtpController } from './otp/otp.controller';
 import { OtpService } from './otp/otp.service';
 import { TrackProgressModule } from './progresss/track_progress/track_progress.module';
+import { ReviewsModule } from './admin/reviews/reviews.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { TrackProgressModule } from './progresss/track_progress/track_progress.m
     JobPathLessonModule,
     AiModule,
     TrackProgressModule,
+    ReviewsModule,
   ],
   controllers: [AppController, OtpController],
   providers: [AppService, OtpService, NewsService],

@@ -32,9 +32,12 @@ export class ReviewsController {
 
   /* ================= GET ALL REVIEWS ================= */
   @Get()
-  async getReviews(@Query('career_id') careerId?: string) {
+  async getReviews(
+    @Query('career_id') careerId?: string,
+    @Query('user_id') userId?: string,
+  ) {
     if (careerId) {
-      return this.reviewsService.getReviewsByCareer(Number(careerId));
+      return this.reviewsService.getReviewsByCareer(Number(careerId), userId);
     }
     return this.reviewsService.getAllReviews();
   }
@@ -64,10 +67,13 @@ export class ReviewsController {
     return this.reviewsService.deleteReview(Number(id));
   }
 
-  /* ================= ADD LIKE ================= */
+  /* ================= TOGGLE LIKE ================= */
   @Patch(':id/like')
-  async addLike(@Param('id') id: string) {
-    return this.reviewsService.addLike(Number(id));
+  async toggleLike(
+    @Param('id') id: string,
+    @Body('userId') userId: string,
+  ) {
+    return this.reviewsService.toggleLike(Number(id), userId);
   }
 
   /* ================= ADD REPLY ================= */
