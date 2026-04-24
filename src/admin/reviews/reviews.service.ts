@@ -74,31 +74,50 @@ export class ReviewsService {
   }
 
   /* ================= GET REVIEWS BY CAREER ================= */
-  async getReviewsByCareer(careerId: number) {
-    const { data, error } = await this.supabaseService.client
+  async getReviewsByCareer(careerId: number, userId?: string) {
+    const { data: reviews, error } = await this.supabaseService.client
       .from('reviews')
-      .select()
+      .select('*')
       .eq('career_id', careerId)
       .is('parent_review_id', null)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      throw new NotFoundException(error.message);
+    if (error) throw new NotFoundException(error.message);
+
+    // Get all replies for these reviews
+    const { data: replies } = await this.supabaseService.client
+      .from('reviews')
+      .select('*')
+      .eq('career_id', careerId)
+      .not('parent_review_id', 'is', null);
+
+    // Get liked status if userId is provided
+    let likedReviewIds = new Set<number>();
+    if (userId) {
+      const { data: likedRows } = await this.supabaseService.client
+        .from('review_likes')
+        .select('review_id')
+        .eq('user_id', userId);
+      
+      if (likedRows) {
+        likedReviewIds = new Set(likedRows.map(r => r.review_id));
+      }
     }
 
-    // Map reviews and fetch replies for each
-    const reviewsWithReplies = await Promise.all(
-      data.map(async (review) => {
-        const mappedReview = this.mapReview(review);
-        const replies = await this.getReplyForReview(review.review_id);
-        return {
-          ...mappedReview,
-          replies: replies,
-        };
-      }),
-    );
+    return (reviews || []).map((r) => {
+      const reviewReplies = (replies || [])
+        .filter((rep) => rep.parent_review_id === r.review_id)
+        .map((rep) => ({
+          ...this.mapReview(rep),
+          isLikedByMe: likedReviewIds.has(rep.review_id)
+        }));
 
-    return reviewsWithReplies;
+      return {
+        ...this.mapReview(r),
+        isLikedByMe: likedReviewIds.has(r.review_id),
+        replies: reviewReplies,
+      };
+    });
   }
 
   /* ================= GET REVIEW BY ID ================= */
@@ -184,35 +203,69 @@ export class ReviewsService {
     return this.mapReview(data);
   }
 
-  /* ================= ADD LIKE ================= */
-  async addLike(id: number) {
-    // Get current likes
+  /* ================= TOGGLE LIKE ================= */
+  async toggleLike(reviewId: number, userId: string) {
+    // 1. Check if the user already liked this review
+    const { data: existingLike, error: checkError } = await this.supabaseService.client
+      .from('review_likes')
+      .select('like_id')
+      .eq('review_id', reviewId)
+      .eq('user_id', userId)
+      .single();
+
+    // Get current review to update total likes
     const { data: review, error: getError } = await this.supabaseService.client
       .from('reviews')
       .select('likes')
-      .eq('review_id', id)
+      .eq('review_id', reviewId)
       .single();
 
     if (getError || !review) {
       throw new NotFoundException('Review not found');
     }
 
-    // Increment likes
-    const { data: result, error } = await this.supabaseService.client
+    let newLikesCount = review.likes;
+
+    if (existingLike) {
+      // 2. Already liked -> UNLIKE
+      const { error: deleteError } = await this.supabaseService.client
+        .from('review_likes')
+        .delete()
+        .eq('review_id', reviewId)
+        .eq('user_id', userId);
+
+      if (deleteError) throw new BadRequestException(deleteError.message);
+      newLikesCount = Math.max(0, review.likes - 1);
+    } else {
+      // 3. Not liked yet -> LIKE
+      const { error: insertError } = await this.supabaseService.client
+        .from('review_likes')
+        .insert({
+          review_id: reviewId,
+          user_id: userId,
+        });
+
+      if (insertError) throw new BadRequestException(insertError.message);
+      newLikesCount = review.likes + 1;
+    }
+
+    // 4. Update the total likes count in the reviews table
+    const { data: result, error: updateError } = await this.supabaseService.client
       .from('reviews')
       .update({
-        likes: review.likes + 1,
+        likes: newLikesCount,
         updated_at: new Date().toISOString(),
       })
-      .eq('review_id', id)
+      .eq('review_id', reviewId)
       .select()
       .single();
 
-    if (error) {
-      throw new BadRequestException(error.message);
-    }
+    if (updateError) throw new BadRequestException(updateError.message);
 
-    return this.mapReview(result);
+    return {
+      ...this.mapReview(result),
+      isLiked: !existingLike, // Return whether it is now liked
+    };
   }
 
   /* ================= ADD REPLY ================= */
@@ -221,7 +274,7 @@ export class ReviewsService {
     const { data: parentReview, error: parentError } =
       await this.supabaseService.client
         .from('reviews')
-        .select('review_id')
+        .select('review_id, career_id')
         .eq('review_id', parentReviewId)
         .single();
 
@@ -236,9 +289,10 @@ export class ReviewsService {
 
     const replyData = {
       parent_review_id: parentReviewId,
+      career_id: parentReview.career_id,
       user_id: data.user_id,
       author: data.author,
-      rating: data.rating || 0,
+      rating: data.rating || 5, // Default to 5 to pass check constraint (1-5)
       comment: data.comment,
       likes: 0,
       created_at: new Date().toISOString(),
@@ -261,6 +315,7 @@ export class ReviewsService {
   private mapReview(review: any) {
     return {
       id: review.review_id,
+      userId: review.user_id,
       author: review.author,
       rating: review.rating,
       comment: review.comment,

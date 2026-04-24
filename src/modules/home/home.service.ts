@@ -48,16 +48,68 @@ export class HomeService {
     return this.mapCareer(data);
   }
 
-  async getIndustryNews(limit = 10) {
-    const { data, error } = await this.supabaseService.client
-      .schema('admin')
-      .from('news')
-      .select('*')
-      .order('news_id', { ascending: false })
-      .limit(limit);
+  async getIndustryNews(limit = 10, industry?: string) {
+    console.log(`[HomeService] Fetching news (limit: ${limit}, industry: ${industry || 'all'})...`);
+    
+    try {
+      // Build query for admin schema
+      let query = this.supabaseService.client
+        .schema('admin')
+        .from('news')
+        .select('*, industries!inner(name)')
+        .order('news_id', { ascending: false })
+        .limit(limit);
 
-    if (error) throw new NotFoundException(error.message);
-    return data || [];
+      if (industry) {
+        // Filter by industry name (case-insensitive)
+        query = query.ilike('industries.name', `%${industry}%`);
+      }
+
+      const { data: adminData, error: adminError } = await query;
+
+      if (!adminError && adminData && adminData.length > 0) {
+        return adminData.map(item => ({
+          ...item,
+          industry: (item as any).industries?.name || 'All Industries'
+        }));
+      }
+
+      // Fallback to public schema if admin is empty or errors
+      let publicQuery = this.supabaseService.client
+        .from('news')
+        .select('*, industries!inner(name)')
+        .order('news_id', { ascending: false })
+        .limit(limit);
+
+      if (industry) {
+        publicQuery = publicQuery.ilike('industries.name', `%${industry}%`);
+      }
+
+      const { data: publicData, error: publicError } = await publicQuery;
+
+      if (publicError) {
+        // If filtering failed, maybe try without filter as a last resort
+        console.warn('[HomeService] Filtered fetch failed, trying without filter...');
+        const { data: allData } = await this.supabaseService.client
+          .from('news')
+          .select('*, industries(name)')
+          .order('news_id', { ascending: false })
+          .limit(limit);
+        
+        return (allData || []).map(item => ({
+          ...item,
+          industry: (item as any).industries?.name || 'All Industries'
+        }));
+      }
+      
+      return (publicData || []).map(item => ({
+        ...item,
+        industry: (item as any).industries?.name || 'All Industries'
+      }));
+    } catch (error) {
+      console.error('[HomeService] Critical error in getIndustryNews:', error.message);
+      return [];
+    }
   }
 
   async getIndustries() {
