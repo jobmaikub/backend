@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
-import { HomeModule } from './modules/home/home.module';
+import { HomeModule } from './home/home.module';
 
 // Import ของ News Cron Job
 import { ScheduleModule } from '@nestjs/schedule';
@@ -29,6 +29,7 @@ import { OtpController } from './otp/otp.controller';
 import { OtpService } from './otp/otp.service';
 import { TrackProgressModule } from './progresss/track_progress/track_progress.module';
 import { ReviewsModule } from './admin/reviews/reviews.module';
+import { BookmarksModule } from './bookmarks/bookmarks.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { ReviewsModule } from './admin/reviews/reviews.module';
     AiModule,
     TrackProgressModule,
     ReviewsModule,
+    BookmarksModule,
   ],
   controllers: [AppController, OtpController],
   providers: [AppService, OtpService, NewsService],

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SupabaseService } from '../../supabase/supabase.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class HomeService {
@@ -107,7 +107,11 @@ export class HomeService {
         industry: (item as any).industries?.name || 'All Industries'
       }));
     } catch (error) {
-      console.error('[HomeService] Critical error in getIndustryNews:', error.message);
+      if (error instanceof Error) {
+        console.error('[HomeService] Critical error in getIndustryNews:', error.message);
+      } else {
+        console.error('[HomeService] An unexpected error occurred:', error);
+      }
       return [];
     }
   }
