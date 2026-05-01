@@ -11,7 +11,6 @@ type CoursePayload = {
   career_path?: string;
   level?: string;
   duration_mins?: number;
-  external_url?: string;
   course_order?: number;
   skills_taught?: string[];
   learning_outcome?: string[];
@@ -38,7 +37,6 @@ export class CoursesService {
       career_path: data.career_path,
       level: this.normalizeLevel(data.level),
       duration_mins: data.duration_mins ?? 0,
-      external_url: data.external_url,
       course_order: data.course_order,
       image_url: data.image_url,
       skills_taught: Array.isArray(data.skills_taught) ? data.skills_taught : [],
@@ -73,7 +71,6 @@ export class CoursesService {
           career_path,
           level,
           duration_mins,
-          external_url,
           course_order,
           image_url,
           skills_taught,
@@ -124,7 +121,6 @@ export class CoursesService {
       career_path: data.career_path,
       level: this.normalizeLevel(data.level),
       duration_mins: data.duration_mins,
-      external_url: data.external_url,
       course_order: data.course_order,
       image_url: data.image_url,
       skills_taught: data.skills_taught,

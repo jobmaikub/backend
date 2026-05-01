@@ -17,13 +17,22 @@ export class BanUsersService {
     unban_date?: string;
     created_by?: string;
   }) {
-    const { data: activeBan } =
+    const nowIso = new Date().toISOString();
+
+    const { data: activeBans, error: activeBanError } =
       await this.supabaseService.client
         .from('ban_users')
         .select('*')
         .eq('user_id', data.user_id)
-        .is('unban_date', null)
-        .single();
+        .or(`unban_date.is.null,unban_date.gt.${nowIso}`)
+        .order('ban_date', { ascending: false })
+        .limit(1);
+
+    if (activeBanError) {
+      throw new BadRequestException(activeBanError.message);
+    }
+
+    const activeBan = activeBans?.[0] ?? null;
 
     if (activeBan) {
       throw new BadRequestException('User is already banned');
@@ -44,10 +53,14 @@ export class BanUsersService {
     if (error) throw new BadRequestException(error.message);
 
     // Update public.profiles.is_banned = true
-    await this.supabaseService.client
+    const { error: profileUpdateError } = await this.supabaseService.client
       .from('profiles')
       .update({ is_banned: true })
       .eq('id', data.user_id);
+
+    if (profileUpdateError) {
+      throw new BadRequestException(profileUpdateError.message);
+    }
 
     return result;
   }
@@ -95,66 +108,77 @@ export class BanUsersService {
   }
 
   async getActiveBanByUserId(userId: string) {
+    const nowIso = new Date().toISOString();
+
     const { data, error } =
       await this.supabaseService.client
         .from('ban_users')
         .select('*')
         .eq('user_id', userId)
-        .is('unban_date', null)
-        .maybeSingle();
+        .or(`unban_date.is.null,unban_date.gt.${nowIso}`)
+        .order('ban_date', { ascending: false })
+        .limit(1);
 
     if (error) {
       throw new BadRequestException(error.message);
     }
 
-    if (!data) {
-      throw new NotFoundException('User is not currently banned');
-    }
-
-    return data;
-  }
-
-  async unbanUserByUserId(userId: string) {
-    const today = new Date().toISOString().slice(0, 10);
-
-    const { data: activeBan, error: findError } =
-      await this.supabaseService.client
-        .from('ban_users')
-        .select('*')
-        .eq('user_id', userId)
-        .is('unban_date', null)
-        .maybeSingle();
-
-    if (findError) {
-      throw new BadRequestException(findError.message);
-    }
+    const activeBan = data?.[0] ?? null;
 
     if (!activeBan) {
       throw new NotFoundException('User is not currently banned');
     }
 
-    const { data: ban, error: updateError } =
+    return activeBan;
+  }
+
+  async unbanUserByUserId(userId: string) {
+    const unbanAt = new Date().toISOString();
+
+    const { data: updatedBans, error: updateError } =
       await this.supabaseService.client
         .from('ban_users')
-        .update({ unban_date: today })
-        .eq('ban_id', activeBan.ban_id)
-        .select()
-        .single();
+        .update({ unban_date: unbanAt })
+        .eq('user_id', userId)
+        .or(`unban_date.is.null,unban_date.gt.${unbanAt}`)
+        .select('*');
 
-    if (updateError || !ban) {
-      throw new NotFoundException('Ban record not found');
+    if (updateError) {
+      throw new BadRequestException(updateError.message);
     }
 
     // Update public.profiles.is_banned = false
-    await this.supabaseService.client
+    const { error: profileUpdateError } = await this.supabaseService.client
       .from('profiles')
       .update({ is_banned: false })
       .eq('id', userId);
 
-    return ban;
+    if (profileUpdateError) {
+      throw new BadRequestException(profileUpdateError.message);
+    }
+
+    if (!updatedBans || updatedBans.length === 0) {
+      return { message: 'No active ban row found. Profile unbanned successfully.' };
+    }
+
+    return {
+      message: 'User unbanned successfully',
+      updated_count: updatedBans.length,
+      latest_ban: updatedBans[0],
+    };
   }
 
   async deleteBan(banId: string) {
+    const { data: ban, error: findError } =
+      await this.supabaseService.client
+        .from('ban_users')
+        .select('ban_id, user_id, unban_date')
+        .eq('ban_id', banId)
+        .maybeSingle();
+
+    if (findError) throw new NotFoundException(findError.message);
+    if (!ban) throw new NotFoundException('Ban record not found');
+
     const { error } =
       await this.supabaseService.client
         .from('ban_users')
@@ -162,6 +186,21 @@ export class BanUsersService {
         .eq('ban_id', banId);
 
     if (error) throw new NotFoundException(error.message);
+
+    const deletedBanWasActive =
+      ban.unban_date === null || new Date(ban.unban_date) > new Date();
+
+    if (deletedBanWasActive) {
+      const { error: profileUpdateError } = await this.supabaseService.client
+        .from('profiles')
+        .update({ is_banned: false })
+        .eq('id', ban.user_id);
+
+      if (profileUpdateError) {
+        throw new BadRequestException(profileUpdateError.message);
+      }
+    }
+
     return { success: true };
   }
 }
