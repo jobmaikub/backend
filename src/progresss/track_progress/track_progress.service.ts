@@ -19,7 +19,6 @@ export class TrackProgressService {
 
     private extractActivityDate(item: any): string | null {
         if (!item || typeof item !== 'object') return null;
-
         const candidates = [
             item.done_at,
             item.completed_at,
@@ -29,149 +28,166 @@ export class TrackProgressService {
             item.activity_date,
             item.date,
         ];
-
         for (const value of candidates) {
-            const normalized = this.normalizeDate(
-                typeof value === 'string' ? value : null,
-            );
+            const normalized = this.normalizeDate(typeof value === 'string' ? value : null);
             if (normalized) return normalized;
         }
-
         return null;
     }
 
-    private async getProgressLessons(userId: string | number) {
-        const adminRes = await this.supabaseService.client
-            .schema('admin')
+    // ─── Single query helpers (no admin schema fallback — data is in public) ───
+
+    private async fetchLessons(userId: string | number) {
+        const { data, error } = await this.supabaseService.client
             .from('user_progress_lesson')
             .select('*')
             .eq('user_id', userId)
             .eq('done', true);
-
-        if (!adminRes.error && Array.isArray(adminRes.data) && adminRes.data.length > 0) {
-            return adminRes.data;
-        }
-
-        const publicRes = await this.supabaseService.client
-            .from('user_progress_lesson')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('done', true);
-
-        if (publicRes.error) return [];
-
-        return publicRes.data ?? [];
+        if (error) { console.error('fetchLessons error:', error.message); }
+        return data ?? [];
     }
 
-    private async getProgressCoursesForActivity(userId: string | number) {
-        const adminRes = await this.supabaseService.client
-            .schema('admin')
+    private async fetchCourseProgress(userId: string | number) {
+        const { data, error } = await this.supabaseService.client
             .from('user_progress_course')
             .select('*')
             .eq('user_id', userId);
-
-        if (!adminRes.error && Array.isArray(adminRes.data) && adminRes.data.length > 0) {
-            return adminRes.data;
-        }
-
-        const publicRes = await this.supabaseService.client
-            .from('user_progress_course')
-            .select('*')
-            .eq('user_id', userId);
-
-        if (publicRes.error) return [];
-        return publicRes.data ?? [];
+        if (error) { console.error('fetchCourseProgress error:', error.message); }
+        return data ?? [];
     }
+
+    // ─── Public API ────────────────────────────────────────────────────────────
 
     async getStats(authUserId: string, progressUserId?: string | number) {
-        const { data, error } =
-            await this.supabaseService.client
+        const resolvedId = progressUserId ?? authUserId;
+
+        // รันทุก query พร้อมกัน — ไม่มี admin fallback แล้ว
+        const [profileRes, lessons, courseProgress, careerProgress] = await Promise.all([
+            this.supabaseService.client
                 .from('profiles')
-                .select(`
-        courses_completed,
-        lessons_done,
-        total_learning_hours,
-        current_streak
-      `)
+                .select('courses_completed, lessons_done, total_learning_hours, current_streak')
                 .eq('id', authUserId)
-                .single();
+                .single(),
+            this.fetchLessons(resolvedId),
+            this.fetchCourseProgress(resolvedId),
+            this.supabaseService.client
+                .from('user_progress_career')
+                .select('progress')
+                .eq('user_id', resolvedId),
+        ]);
 
-        // 🔥 ดึง progress
-        const resolvedProgressUserId = progressUserId ?? authUserId;
-        const overallProgress = await this.getOverallProgress(resolvedProgressUserId);
+        const profile = profileRes.data;
 
-        const lessons = await this.getProgressLessons(resolvedProgressUserId);
+        // lessons count
         const lessonsDone = lessons.length;
 
-        const completedCourses = await this.getCompletedCourses(resolvedProgressUserId);
-        const completedCoursesCount = completedCourses.filter((c: any) => {
-            if (c?.complete === true) return true;
-            return typeof c?.progress === 'number' && c.progress >= 100;
-        }).length;
+        // courses complete
+        const completedCoursesCount = courseProgress.filter((c: any) =>
+            c?.complete === true || (typeof c?.progress === 'number' && c.progress >= 100)
+        ).length;
 
-        const activity = await this.getActivityHeatmap(resolvedProgressUserId);
+        // overall progress
+        let overallProgress = 0;
+        if (!careerProgress.error && careerProgress.data?.length) {
+            const total = careerProgress.data.reduce((s, c) => s + (c.progress || 0), 0);
+            overallProgress = Math.round(total / careerProgress.data.length);
+        } else if (courseProgress.length) {
+            const total = courseProgress.reduce((s: number, r: any) => {
+                if (typeof r.progress === 'number') return s + r.progress;
+                if (r.complete === true) return s + 100;
+                return s;
+            }, 0);
+            overallProgress = Math.round(total / courseProgress.length);
+        }
+
+        // activity heatmap (built from lessons + courses already fetched)
+        const activity = this.buildHeatmap(lessons, courseProgress);
         const streak = this.calculateStreak(activity);
 
         return {
-            coursesComplete: data?.courses_completed ?? completedCoursesCount,
-            totalLessons: data?.lessons_done ?? lessonsDone,
-            totalHours: data?.total_learning_hours ?? 0,
-            streak: data?.current_streak ?? streak,
-            overallProgress, // ✅ เพิ่ม
+            coursesComplete: profile?.courses_completed ?? completedCoursesCount,
+            totalLessons: profile?.lessons_done ?? lessonsDone,
+            totalHours: profile?.total_learning_hours ?? 0,
+            streak: profile?.current_streak ?? streak,
+            overallProgress,
         };
     }
 
-    private calculateStreak(activity: { date: string; count: number }[]) {
-        if (!activity.length) return 0;
+    async getActivityHeatmap(userId: string | number) {
+        const [lessons, courses] = await Promise.all([
+            this.fetchLessons(userId),
+            this.fetchCourseProgress(userId),
+        ]);
+        return this.buildHeatmap(lessons, courses.filter((c: any) => c?.complete === true));
+    }
 
+    private buildHeatmap(lessons: any[], completedCourses: any[]) {
+        const map: Record<string, { lessons: number; courses: Set<number>; count: number }> = {};
+
+        lessons.forEach((item: any) => {
+            const date = this.extractActivityDate(item);
+            if (!date) return;
+            if (!map[date]) map[date] = { lessons: 0, courses: new Set(), count: 0 };
+            map[date].count += 1;
+            map[date].lessons += 1;
+        });
+
+        completedCourses.forEach((item: any) => {
+            const date = this.extractActivityDate(item);
+            if (!date) return;
+            if (!map[date]) map[date] = { lessons: 0, courses: new Set(), count: 0 };
+            const id = item.user_progress_course_id ?? item.course_id;
+            if (id) map[date].courses.add(id);
+        });
+
+        return Object.entries(map)
+            .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+            .map(([date, val]) => ({
+                date,
+                count: val.count,
+                lessons: val.lessons,
+                courses: val.courses.size,
+            }));
+    }
+
+    private calculateStreak(activity: { date: string }[]) {
+        if (!activity.length) return 0;
         const daySet = new Set(activity.map((a) => a.date));
         let streak = 0;
         const cursor = new Date();
-
         while (true) {
             const key = cursor.toISOString().split('T')[0];
             if (!daySet.has(key)) break;
             streak += 1;
             cursor.setDate(cursor.getDate() - 1);
         }
-
         return streak;
     }
 
     async getActivity(userId: string | number) {
-        const { data, error } =
-            await this.supabaseService.client
-                .from('user_progress_lesson')
-                .select('*')
-                .eq('user_id', userId);
-
+        const { data, error } = await this.supabaseService.client
+            .from('user_progress_lesson')
+            .select('done_at, created_at, updated_at')
+            .eq('user_id', userId);
         if (error) return [];
-
-        // 🔥 group by date
         const map: Record<string, number> = {};
-
         data.forEach((item: any) => {
             const date = this.extractActivityDate(item);
             if (!date) return;
             map[date] = (map[date] || 0) + 1;
         });
-
-        return Object.entries(map).map(([date, count]) => ({
-            date,
-            count,
-        }));
+        return Object.entries(map).map(([date, count]) => ({ date, count }));
     }
 
     async getCompletedCourses(userId: string | number) {
-        const adminResult = await this.supabaseService.client
-            .schema('admin')
+        const { data, error } = await this.supabaseService.client
             .from('user_progress_course')
             .select(`
                 user_progress_course_id,
                 progress,
                 complete,
                 course_id,
-                courses!user_progress_course_course_fk (
+                courses!inner (
                     course_id,
                     title,
                     description
@@ -179,133 +195,42 @@ export class TrackProgressService {
             `)
             .eq('user_id', userId);
 
-        const { data, error } =
-            !adminResult.error && Array.isArray(adminResult.data) && adminResult.data.length > 0
-                ? adminResult
-                : await this.supabaseService.client
-                    .from('user_progress_course')
-                    .select(`
-                        user_progress_course_id,
-                        progress,
-                        complete,
-                        course_id,
+        if (error) return [];
 
-                        courses!inner (
-                            course_id,
-                            title,
-                            description
-                        )
-                    `)
-                    .eq('user_id', userId);
-
-        if (error) {
-            return [];
-        }
-
-        // 🔥 map ให้ frontend ใช้ง่าย
-        return data.map((c) => ({
-            course: Array.isArray((c as any).courses)
-                ? (c as any).courses[0]
-                : (c as any).courses,
-            id: c.user_progress_course_id,
-            progress: c.progress,
-            courseId: c.course_id,
-            complete: c.complete,
-            title: Array.isArray((c as any).courses)
-                ? (c as any).courses[0]?.title
-                : (c as any).courses?.title,
-            description: Array.isArray((c as any).courses)
-                ? (c as any).courses[0]?.description
-                : (c as any).courses?.description,
-        }));
-    }
-
-    async getActivityHeatmap(userId: string | number) {
-        const lessonData = await this.getProgressLessons(userId);
-        const courseData = await this.getProgressCoursesForActivity(userId);
-
-        const map: Record<string, number> = {};
-
-        lessonData.forEach((item: any) => {
-            const date = this.extractActivityDate(item);
-            if (!date) return;
-            map[date] = (map[date] || 0) + 1;
+        return data.map((c) => {
+            const course = Array.isArray((c as any).courses) ? (c as any).courses[0] : (c as any).courses;
+            return {
+                course,
+                id: c.user_progress_course_id,
+                progress: c.progress,
+                courseId: c.course_id,
+                complete: c.complete,
+                title: course?.title,
+                description: course?.description,
+            };
         });
-
-        // Fallback: ถ้า lesson ไม่มี timestamp ให้ใช้ course progress เพื่อให้ heatmap ไม่ว่าง
-        if (Object.keys(map).length === 0) {
-            courseData.forEach((item: any) => {
-                const isActive =
-                    item?.complete === true
-                    || (typeof item?.progress === 'number' && item.progress > 0);
-
-                if (!isActive) return;
-
-                const date = this.extractActivityDate(item);
-                if (!date) return;
-
-                map[date] = (map[date] || 0) + 1;
-            });
-        }
-
-        return Object.entries(map)
-            .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-            .map(([date, count]) => ({
-            date,
-            count,
-        }));
     }
 
     async getOverallProgress(userId: string | number) {
-        const adminResult = await this.supabaseService.client
-            .schema('admin')
-            .from('user_progress_career')
-            .select('progress')
-            .eq('user_id', userId);
+        const [careerRes, courseRes] = await Promise.all([
+            this.supabaseService.client.from('user_progress_career').select('progress').eq('user_id', userId),
+            this.supabaseService.client.from('user_progress_course').select('progress, complete').eq('user_id', userId),
+        ]);
 
-        const { data, error } =
-            !adminResult.error && Array.isArray(adminResult.data) && adminResult.data.length > 0
-                ? adminResult
-                : await this.supabaseService.client
-                    .from('user_progress_career')
-                    .select('progress')
-                    .eq('user_id', userId);
-
-        if (!error && data.length > 0) {
-            const total = data.reduce((sum, c) => sum + (c.progress || 0), 0);
-            return Math.round(total / data.length);
+        if (!careerRes.error && careerRes.data?.length) {
+            const total = careerRes.data.reduce((s, c) => s + (c.progress || 0), 0);
+            return Math.round(total / careerRes.data.length);
         }
 
-        // fallback: คำนวณจากความคืบหน้ารายคอร์ส เมื่อ career progress ไม่มีข้อมูล
-        const adminCourses = await this.supabaseService.client
-            .schema('admin')
-            .from('user_progress_course')
-            .select('progress, complete')
-            .eq('user_id', userId);
-
-        const courseResult =
-            !adminCourses.error && Array.isArray(adminCourses.data) && adminCourses.data.length > 0
-                ? adminCourses
-                : await this.supabaseService.client
-                    .from('user_progress_course')
-                    .select('progress, complete')
-                    .eq('user_id', userId);
-
-        if (courseResult.error || !courseResult.data?.length) {
-            return 0;
+        if (!courseRes.error && courseRes.data?.length) {
+            const total = courseRes.data.reduce((s: number, r: any) => {
+                if (typeof r.progress === 'number') return s + r.progress;
+                if (r.complete === true) return s + 100;
+                return s;
+            }, 0);
+            return Math.round(total / courseRes.data.length);
         }
 
-        const total = courseResult.data.reduce((sum, row: any) => {
-            if (typeof row.progress === 'number') {
-                return sum + row.progress;
-            }
-            if (row.complete === true) {
-                return sum + 100;
-            }
-            return sum;
-        }, 0);
-
-        return Math.round(total / courseResult.data.length);
+        return 0;
     }
-
 }
