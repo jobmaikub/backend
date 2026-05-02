@@ -12,11 +12,30 @@ export class InterestsService {
   ) {}
 
   async createInterest(data: { interest_name: string }) {
+    const { data: lastRows, error: lastRowsError } =
+      await this.supabaseService.client
+        .schema('admin')
+        .from('interests')
+        .select('interest_id')
+        .order('interest_id', { ascending: false })
+        .limit(1);
+
+    if (lastRowsError) {
+      throw new BadRequestException(lastRowsError.message);
+    }
+
+    const nextInterestId = (Array.isArray(lastRows) && lastRows.length > 0)
+      ? Number(lastRows[0].interest_id) + 1
+      : 1;
+
     const { data: result, error } =
       await this.supabaseService.client
         .schema('admin')
         .from('interests')
-        .insert(data)
+        .insert({
+          interest_id: nextInterestId,
+          interest_name: data.interest_name,
+        })
         .select()
         .single();
 
@@ -65,10 +84,12 @@ export class InterestsService {
         .select()
         .single();
 
-    if (error || !result) {
-      throw new NotFoundException(
-        error?.message || 'Interest not found',
-      );
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
+
+    if (!result) {
+      throw new NotFoundException('Interest not found');
     }
 
     return result;
@@ -82,7 +103,7 @@ export class InterestsService {
         .delete()
         .eq('interest_id', interestId);
 
-    if (error) throw new NotFoundException(error.message);
+    if (error) throw new BadRequestException(error.message);
     return { success: true };
   }
 }

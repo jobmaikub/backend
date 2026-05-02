@@ -13,10 +13,7 @@ export class SkillsService {
 
   async createSkill(data: {
     name: string;
-    category: {
-      faculty_id: number;
-      major_id: number;
-    };
+    category: any; // jsonb
     icon?: string;
   }) {
     // 1. หา id ว่างที่น้อยที่สุด
@@ -41,7 +38,9 @@ export class SkillsService {
         .from('skills')
         .insert({
           skill_id: nextSkillId,
-          ...data,
+          name: data.name,
+          category: data.category,
+          icon: data.icon || null,
         })
         .select()
         .single();
@@ -82,10 +81,7 @@ export class SkillsService {
     skillId: number,
     data: {
       name?: string;
-      category?: {
-        faculty_id: number;
-        major_id: number;
-      };
+      category?: any; // jsonb
       icon?: string;
     },
   ) {

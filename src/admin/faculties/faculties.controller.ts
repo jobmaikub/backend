@@ -1,7 +1,7 @@
 import { Controller, Delete, Patch, Param, Body, Post, Get } from '@nestjs/common';
 import { FacultiesService } from './faculties.service';
 
-@Controller('faculties')
+@Controller('admin/faculties')
 export class FacultiesController {
   constructor(private readonly facultiesService: FacultiesService) {}
 
@@ -9,10 +9,8 @@ export class FacultiesController {
   createFaculty(
     @Body()
     body: {
-      name: string;
-      name_th?: string;
-      icon?: string;
-      theme_color?: string;
+      eng_name: string;
+      th_name?: string;
     },
   ) {
     return this.facultiesService.createFaculty(body);
@@ -33,10 +31,8 @@ export class FacultiesController {
     @Param('id') id: string,
     @Body()
     body: {
-      name?: string;
-      name_th?: string;
-      icon?: string;
-      theme_color?: string;
+      eng_name?: string;
+      th_name?: string;
     },
   ) {
     return this.facultiesService.updateFaculty(Number(id), body);
