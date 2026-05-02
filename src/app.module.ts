@@ -4,11 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SupabaseModule } from './supabase/supabase.module';
 import { HomeModule } from './home/home.module';
-
-// Import ของ News Cron Job
 import { ScheduleModule } from '@nestjs/schedule';
-import { NewsService } from './admin/news/news.service';
-
 import { CareersModule } from './admin/careers/careers.module';
 import { CoursesModule } from './admin/courses/courses.module';
 import { FacultiesModule } from './admin/faculties/faculties.module';
@@ -25,8 +21,7 @@ import { JobPathAllCareerModule } from './progresss/job_path_all_career/job_path
 import { JobPathCareerModule } from './progresss/job_path_career/job_path_career.module';
 import { JobPathLessonModule } from './progresss/job_path_lesson/job_path_lesson.module';
 import { AiModule } from './ai/ai.module';
-import { OtpController } from './otp/otp.controller';
-import { OtpService } from './otp/otp.service';
+import { OtpModule } from './otp/otp.module';
 import { TrackProgressModule } from './progresss/track_progress/track_progress.module';
 import { ReviewsModule } from './admin/reviews/reviews.module';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
@@ -59,8 +54,9 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
     TrackProgressModule,
     ReviewsModule,
     BookmarksModule,
+    OtpModule,
   ],
-  controllers: [AppController, OtpController],
-  providers: [AppService, OtpService, NewsService],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule { }
