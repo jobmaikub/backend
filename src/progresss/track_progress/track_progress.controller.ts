@@ -1,32 +1,34 @@
 
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { TrackProgressService } from './track_progress.service';
+import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
 
 @Controller('track-progress')
+@UseGuards(SupabaseAuthGuard)
 export class TrackProgressController {
   constructor(
     private readonly trackProgressService: TrackProgressService,
   ) {}
 
-  // 🔥 FIX USER ID ตรงนี้
-  private userId = '6b9560eb-8970-47ae-a5fc-81f5a7e96b98';
-
   @Get('stats')
-  getStats() {
-    return this.trackProgressService.getStats(this.userId);
+  getStats(@Req() req: any) {
+    return this.trackProgressService.getStats(
+      req.user.id,
+      req.profile?.user_id,
+    );
   }
 
   @Get('completed-courses')
-  getCompletedCourses() {
+  getCompletedCourses(@Req() req: any) {
     return this.trackProgressService.getCompletedCourses(
-      this.userId,
+      req.profile?.user_id ?? req.user.id,
     );
   }
 
   @Get('activity')
-  getActivity() {
+  getActivity(@Req() req: any) {
     return this.trackProgressService.getActivityHeatmap(
-      this.userId,
+      req.profile?.user_id ?? req.user.id,
     );
   }
 }
