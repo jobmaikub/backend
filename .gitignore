@@ -47,3 +47,6 @@ pids/
 
 # Node diagnostic reports
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# gemini
+.gemini/

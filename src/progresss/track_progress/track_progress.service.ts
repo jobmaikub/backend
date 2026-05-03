@@ -180,33 +180,40 @@ export class TrackProgressService {
     }
 
     async getCompletedCourses(userId: string | number) {
-        const { data, error } = await this.supabaseService.client
+        // 1. Fetch progress records from public schema
+        const { data: progressData, error: progressError } = await this.supabaseService.client
             .from('user_progress_course')
             .select(`
                 user_progress_course_id,
                 progress,
                 complete,
-                course_id,
-                courses!inner (
-                    course_id,
-                    title,
-                    description
-                )
+                course_id
             `)
             .eq('user_id', userId);
 
-        if (error) return [];
+        if (progressError || !progressData) return [];
 
-        return data.map((c) => {
-            const course = Array.isArray((c as any).courses) ? (c as any).courses[0] : (c as any).courses;
+        // 2. Fetch course details from admin schema
+        const courseIds = progressData.map(p => p.course_id);
+        let coursesDetails: any[] = [];
+        if (courseIds.length > 0) {
+            const { data } = await this.supabaseService.client.schema('admin')
+                .from('courses')
+                .select('course_id, title, description')
+                .in('course_id', courseIds);
+            if (data) coursesDetails = data;
+        }
+
+        // 3. Merge and return
+        return progressData.map((p) => {
+            const detail = coursesDetails.find(d => d.course_id === p.course_id);
             return {
-                course,
-                id: c.user_progress_course_id,
-                progress: c.progress,
-                courseId: c.course_id,
-                complete: c.complete,
-                title: course?.title,
-                description: course?.description,
+                id: p.user_progress_course_id,
+                progress: p.progress,
+                courseId: p.course_id,
+                complete: p.complete,
+                title: detail?.title || 'Unknown Course',
+                description: detail?.description || '',
             };
         });
     }

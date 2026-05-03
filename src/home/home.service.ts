@@ -8,16 +8,18 @@ export class HomeService {
   private mapCareer(row: any) {
     return {
       ...row,
-      industry: row.industries?.name || null,
+      industry: row.industry_name || row.industries?.name || null,
       industries: undefined,
+      industry_name: undefined,
     };
   }
 
   async getTrendingCareers(limit = 3) {
     const { data, error } = await this.supabaseService.client
       .schema('admin')
-      .from('careers')
-      .select(`*, industries(name)`)
+      .from('career_popularity')
+      .select(`*`)
+      .order('popularity', { ascending: false })
       .order('career_id', { ascending: true })
       .limit(limit);
 
