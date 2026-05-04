@@ -37,7 +37,7 @@ export class LearningPathService {
                 industry: careerDetail.industry || 'General',
                 progress: cp.progress || 0,
                 // These will be overridden by frontend useCareers anyway, but let's provide defaults
-                courses: careerDetail.course_count || 0, 
+                courses: careerDetail.course_count || 0,
                 hours: careerDetail.duration_hrs || 0,
             };
         });
@@ -111,7 +111,7 @@ export class LearningPathService {
             };
         });
 
-        const sortedCourses = mergedCourses.sort((a, b) => 
+        const sortedCourses = mergedCourses.sort((a, b) =>
             (a.course_details?.course_order || 0) - (b.course_details?.course_order || 0)
         );
 
@@ -165,7 +165,7 @@ export class LearningPathService {
             };
         });
 
-        const sortedLessons = mergedLessons.sort((a, b) => 
+        const sortedLessons = mergedLessons.sort((a, b) =>
             (a.lesson_details?.lesson_order || 0) - (b.lesson_details?.lesson_order || 0)
         );
 
@@ -198,7 +198,7 @@ export class LearningPathService {
             .single();
 
         if (error) throw new BadRequestException(error.message);
-        
+
         return { message: `Lesson marked as ${done ? 'completed' : 'incomplete'}`, progress: data };
     }
 

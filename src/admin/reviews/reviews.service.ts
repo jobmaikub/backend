@@ -27,7 +27,7 @@ interface AddReplyData {
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(private readonly supabaseService: SupabaseService) { }
 
   /* ================= CREATE REVIEW ================= */
   async createReview(data: CreateReviewData) {
@@ -98,7 +98,7 @@ export class ReviewsService {
         .from('review_likes')
         .select('review_id')
         .eq('user_id', userId);
-      
+
       if (likedRows) {
         likedReviewIds = new Set(likedRows.map(r => r.review_id));
       }
@@ -311,6 +311,49 @@ export class ReviewsService {
     return this.mapReview(result);
   }
 
+  /* ================= REPORT REVIEW ================= */
+  async reportReview(reviewId: number, data: { userId: string, reportType: string, reason?: string }) {
+    // 1. ดึงข้อมูลรีวิว
+    const { data: review, error: fetchError } = await this.supabaseService.client
+      .from('reviews')
+      .select('user_id')
+      .eq('review_id', reviewId)
+      .single();
+
+    if (fetchError || !review) {
+      console.error('Fetch review error:', fetchError);
+      throw new NotFoundException('Review not found');
+    }
+
+    // 2. ป้องกันการ Report ตัวเอง
+    if (data.userId === review.user_id) {
+      throw new BadRequestException('You cannot report your own review');
+    }
+
+    // 3. บันทึกลงตาราง user_reports
+    const insertData = {
+      by_user_id: data.userId,
+      report_user_id: review.user_id,
+      review_id: reviewId,
+      report_type: data.reportType, // เก็บหัวข้อที่เลือก (เช่น Spam, Harassment)
+      reason: data.reason || `Reported as ${data.reportType}`, // เก็บรายละเอียดที่พิมพ์เพิ่ม
+      status: 'pending',
+    };
+
+    const { data: result, error } = await this.supabaseService.client
+      .from('user_reports')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase Insert Error:', error);
+      throw new BadRequestException(`Database Error: ${error.message}`);
+    }
+
+    return result;
+  }
+
   /* ================= MAP REVIEW ================= */
   private mapReview(review: any) {
     return {
@@ -322,6 +365,7 @@ export class ReviewsService {
       likes: review.likes,
       date: new Date(review.created_at).toLocaleDateString('th-TH'),
       careerId: review.career_id,
+      parentReviewId: review.parent_review_id,
     };
   }
 }

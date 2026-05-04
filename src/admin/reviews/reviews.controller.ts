@@ -90,4 +90,18 @@ export class ReviewsController {
   ) {
     return this.reviewsService.addReply(Number(id), body);
   }
+
+  /* ================= REPORT REVIEW ================= */
+  @Post(':id/report')
+  async reportReview(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      userId: string;
+      reportType: string;
+      reason?: string;
+    },
+  ) {
+    return this.reviewsService.reportReview(Number(id), body);
+  }
 }

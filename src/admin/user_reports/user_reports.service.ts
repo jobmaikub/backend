@@ -51,6 +51,8 @@ export class UserReportsService {
           status,
           created_at,
           updated_at,
+          review_id,
+          review:review_id(career_id),
           reporter:by_user_id(id, email, full_name),
           reported_user:report_user_id(id, email, full_name)
         `)
@@ -72,6 +74,8 @@ export class UserReportsService {
           report_type,
           status,
           created_at,
+          review_id,
+          review:review_id(career_id),
           reporter:by_user_id(id, email, full_name),
           reported_user:report_user_id(id, email, full_name)
         `)
@@ -267,6 +271,7 @@ export class UserReportsService {
           report_type,
           status,
           created_at,
+          review_id,
           reporter:by_user_id(id, email, full_name)
         `)
         .eq('report_user_id', userId)
