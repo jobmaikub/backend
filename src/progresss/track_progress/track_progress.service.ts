@@ -240,4 +240,93 @@ export class TrackProgressService {
 
         return 0;
     }
+
+    async getEnrichedSkills(userId: string | number) {
+        // 1. Get completed course IDs and their update dates
+        const { data: completedCourses, error: progressError } = await this.supabaseService.client
+            .from('user_progress_course')
+            .select('course_id, updated_at')
+            .eq('user_id', userId)
+            .eq('complete', true);
+
+        if (progressError || !completedCourses?.length) return [];
+
+        const courseIds = completedCourses.map(c => c.course_id);
+        const courseUpdateMap = new Map(completedCourses.map(c => [c.course_id, c.updated_at]));
+
+        // 2. Get course details (skills_taught, level, career_id) from admin schema
+        const { data: courses } = await this.supabaseService.client.schema('admin')
+            .from('courses')
+            .select('course_id, title, level, skills_taught, career_id')
+            .in('course_id', courseIds);
+
+        if (!courses?.length) return [];
+
+        // 3. Get career titles
+        const careerIds = [...new Set(courses.map((c: any) => c.career_id))];
+        const { data: careers } = await this.supabaseService.client.schema('admin')
+            .from('careers')
+            .select('career_id, title')
+            .in('career_id', careerIds);
+
+        const careerMap = new Map((careers ?? []).map((c: any) => [c.career_id, c.title]));
+
+        // Level rank for determining highest achieved level
+        const levelRank: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3 };
+
+        // 4. Aggregate skills across courses
+        const skillMap: Record<string, {
+            name: string;
+            level: string;
+            courseCount: number;
+            careers: Set<string>;
+            lastUpdated: string | null;
+        }> = {};
+
+        for (const course of courses as any[]) {
+            if (!Array.isArray(course.skills_taught)) continue;
+            const careerTitle = careerMap.get(course.career_id) || 'General';
+            const updatedAt = courseUpdateMap.get(course.course_id) || null;
+
+            for (const skill of course.skills_taught) {
+                if (!skill) continue;
+                if (!skillMap[skill]) {
+                    skillMap[skill] = { name: skill, level: course.level, courseCount: 0, careers: new Set(), lastUpdated: updatedAt };
+                }
+                skillMap[skill].courseCount += 1;
+                skillMap[skill].careers.add(careerTitle);
+
+                // Update last updated if this course is more recent
+                if (updatedAt && (!skillMap[skill].lastUpdated || new Date(updatedAt) > new Date(skillMap[skill].lastUpdated))) {
+                    skillMap[skill].lastUpdated = updatedAt;
+                }
+
+                // Upgrade level if this course is higher ranked
+                if ((levelRank[course.level] ?? 0) > (levelRank[skillMap[skill].level] ?? 0)) {
+                    skillMap[skill].level = course.level;
+                }
+            }
+        }
+
+        // 5. Sort: advanced first, then by last updated, then by course count
+        return Object.values(skillMap)
+            .map(s => ({
+                name: s.name,
+                level: s.level,
+                courseCount: s.courseCount,
+                careers: [...s.careers],
+                lastUpdated: s.lastUpdated,
+            }))
+            .sort((a, b) => {
+                const levelDiff = (levelRank[b.level] ?? 0) - (levelRank[a.level] ?? 0);
+                if (levelDiff !== 0) return levelDiff;
+                
+                // If same level, more recent first
+                if (a.lastUpdated && b.lastUpdated) {
+                    return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
+                }
+                
+                return b.courseCount - a.courseCount;
+            });
+    }
 }

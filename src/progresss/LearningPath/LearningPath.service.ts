@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 @Injectable()
 export class LearningPathService {
+    private readonly logger = new Logger(LearningPathService.name);
     constructor(private readonly supabaseService: SupabaseService) { }
 
     async getLearningPaths(userId: string) {
@@ -200,6 +201,63 @@ export class LearningPathService {
         if (error) throw new BadRequestException(error.message);
 
         return { message: `Lesson marked as ${done ? 'completed' : 'incomplete'}`, progress: data };
+    }
+
+    async completeCourse(userId: string, courseId: number, done: boolean) {
+        // Find the user_progress_course first
+        const { data: courseProgress, error: courseError } = await this.supabaseService.client
+            .from('user_progress_course')
+            .select('user_progress_course_id')
+            .eq('user_id', userId)
+            .eq('course_id', courseId)
+            .single();
+
+        if (courseError || !courseProgress) {
+            throw new NotFoundException('Course progress not found');
+        }
+
+        // Update all lessons belonging to this user_progress_course
+        const { data, error } = await this.supabaseService.client
+            .from('user_progress_lesson')
+            .update({ done: done })
+            .eq('user_progress_course_id', courseProgress.user_progress_course_id)
+            .select();
+
+        if (error) throw new BadRequestException(error.message);
+
+        return { message: `Course marked as ${done ? 'completed' : 'incomplete'}`, updatedLessons: data.length };
+    }
+
+    async bulkUpdateLessons(userId: string, lessonUpdates: { lesson_id: number, done: boolean }[]) {
+        this.logger.log(`Bulk updating ${lessonUpdates.length} lessons for user ${userId}`);
+        
+        try {
+            const results = await Promise.all(lessonUpdates.map(async (update) => {
+                const { data, error } = await this.supabaseService.client
+                    .from('user_progress_lesson')
+                    .update({ done: update.done })
+                    .eq('user_id', userId)
+                    .eq('lesson_id', update.lesson_id)
+                    .select();
+
+                if (error) {
+                    this.logger.error(`Error updating lesson ${update.lesson_id}: ${error.message}`);
+                    return null;
+                }
+                return data;
+            }));
+
+            const updatedCount = results.filter(r => r && r.length > 0).length;
+            this.logger.log(`Successfully updated ${updatedCount} lessons`);
+            
+            return { 
+                message: 'Bulk update processed', 
+                updatedCount 
+            };
+        } catch (err) {
+            this.logger.error(`Bulk update failed: ${err.message}`);
+            throw new BadRequestException('Failed to process bulk update: ' + err.message);
+        }
     }
 
     async deleteLearningPath(userId: string, careerId: number) {

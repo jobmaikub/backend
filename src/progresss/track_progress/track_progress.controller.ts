@@ -31,4 +31,11 @@ export class TrackProgressController {
       req.profile?.user_id ?? req.user.id,
     );
   }
+
+  @Get('skills')
+  getEnrichedSkills(@Req() req: any) {
+    return this.trackProgressService.getEnrichedSkills(
+      req.profile?.user_id ?? req.user.id,
+    );
+  }
 }
