@@ -222,14 +222,24 @@ export class AiService {
         .sort((a, b) => Number(b.match_score ?? b.score ?? 0) - Number(a.match_score ?? a.score ?? 0))
         .slice(0, 3);
 
-      // บันทึกใหม่ พร้อมเก็บ skills
+      // ลบ history เก่าของ user นี้ก่อน (ป้องกัน duplicate และ sequence desync)
+      await this.supabase.client
+        .from('user_ai_results')
+        .delete()
+        .eq('user_id', user.user_id);
+
+      // Insert ผลลัพธ์ใหม่ พร้อม selection ที่ user เลือก
       const inserts = top3.map(res => ({
         user_id: user.user_id,
         career_id: res.career_id || res.id,
         score: Number(res.match_score ?? res.score ?? 0),
         explanation: res.explanation,
         matching_skills: res.matching_skills || [],
-        skills_to_develop: res.skills_to_develop || []
+        skills_to_develop: res.skills_to_develop || [],
+        faculty_id: user.faculty_id || null,
+        major_id: user.major_id || null,
+        skill_ids: user.skills || [],
+        interest_ids: user.interests || []
       }));
 
       const { error: insertError } = await this.supabase.client
@@ -248,7 +258,7 @@ export class AiService {
   async getLatestMatches(userId: string) {
     const { data: matches, error } = await this.supabase.client
       .from('user_ai_results')
-      .select('id, career_id, score, explanation, matching_skills, skills_to_develop')
+      .select('id, career_id, score, explanation, matching_skills, skills_to_develop, faculty_id, major_id, skill_ids, interest_ids')
       .eq('user_id', userId)
       .order('id', { ascending: false })
       .limit(3);
@@ -261,6 +271,15 @@ export class AiService {
       .from('careers')
       .select('career_id, title, description, image_url, industries(name)')
       .in('career_id', careerIds);
+
+    // ดึง selection ที่ user เลือกจาก row แรก (ทุก row ใช้ selection เดียวกัน)
+    const firstMatch = matches[0];
+    const userSelection = {
+      faculty_id: firstMatch?.faculty_id ?? null,
+      major_id: firstMatch?.major_id ?? null,
+      skill_ids: firstMatch?.skill_ids ?? [],
+      interest_ids: firstMatch?.interest_ids ?? []
+    };
 
     const mapped = matches.map(m => {
       const db = dbDetails?.find(d => d.career_id === m.career_id);
@@ -278,6 +297,9 @@ export class AiService {
       };
     });
 
-    return mapped.sort((a, b) => Number(b.match_score ?? b.score ?? 0) - Number(a.match_score ?? a.score ?? 0));
+    const sorted = mapped.sort((a, b) => Number(b.match_score ?? b.score ?? 0) - Number(a.match_score ?? a.score ?? 0));
+
+    // Return พร้อม selection ที่ user เคยเลือก
+    return { matches: sorted, userSelection };
   }
 }
