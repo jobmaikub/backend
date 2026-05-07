@@ -1,12 +1,16 @@
 import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { AppService } from './app.service';
 import { SupabaseService } from './supabase/supabase.service';
+import { ReviewsService } from './admin/reviews/reviews.service';
+import { TrackProgressService } from './progresss/track_progress/track_progress.service';
 
 @Controller()
 export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly supabaseService: SupabaseService,
+    private readonly reviewsService: ReviewsService,
+    private readonly trackProgressService: TrackProgressService,
   ) { }
 
   @Get()
@@ -37,5 +41,37 @@ export class AppController {
     }
 
     return data;
+  }
+
+  @Get('user-dashboard/:id')
+  async getUserDashboard(@Param('id') id: string) {
+    try {
+      console.log(`[Dashboard] Fetching data for user: ${id}`);
+      const [profileRes, skills, reviews] = await Promise.all([
+        this.supabaseService.client
+          .from('profiles')
+          .select('*')
+          .eq('id', id)
+          .single(),
+        this.trackProgressService.getEnrichedSkills(id),
+        this.reviewsService.getReviewsByUser(id),
+      ]);
+
+      if (profileRes.error || !profileRes.data) {
+        console.error(`[Dashboard] Profile error for ${id}:`, profileRes.error);
+        throw new NotFoundException('User profile not found');
+      }
+
+      console.log(`[Dashboard] Found ${skills?.length || 0} skills and ${reviews?.length || 0} reviews for ${id}`);
+
+      return {
+        profile: profileRes.data,
+        skills: skills || [],
+        reviews: reviews || [],
+      };
+    } catch (error) {
+      console.error(`[Dashboard] Error for ${id}:`, error);
+      throw error;
+    }
   }
 }
