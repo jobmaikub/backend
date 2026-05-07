@@ -14,6 +14,15 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @Get('health')
+  healthCheck() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    };
+  }
+
   @Get('public-profile/:id')
   async getPublicProfile(@Param('id') id: string) {
     const { data, error } = await this.supabaseService.client
