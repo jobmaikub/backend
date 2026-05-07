@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   Query,
+  Header,
 } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 
@@ -32,6 +33,7 @@ export class ReviewsController {
 
   /* ================= GET ALL REVIEWS ================= */
   @Get()
+  @Header('Cache-Control', 'no-store')
   async getReviews(
     @Query('career_id') careerId?: string,
     @Query('user_id') userId?: string,
@@ -47,6 +49,7 @@ export class ReviewsController {
 
   /* ================= GET REVIEW BY ID ================= */
   @Get(':id')
+  @Header('Cache-Control', 'no-store')
   async getReviewById(@Param('id') id: string) {
     return this.reviewsService.getReviewById(Number(id));
   }

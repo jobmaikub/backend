@@ -75,19 +75,34 @@ export class ReviewsService {
 
   /* ================= GET REVIEWS BY USER ================= */
   async getReviewsByUser(userId: string) {
-    const { data, error } = await this.supabaseService.client
-      .from('view_user_reviews')
+    // 1. Fetch reviews directly from public.reviews for immediate results
+    const { data: reviews, error: reviewsError } = await this.supabaseService.client
+      .from('reviews')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      throw new NotFoundException(error.message);
+    if (reviewsError) {
+      throw new NotFoundException(reviewsError.message);
     }
 
-    return (data || []).map((review: any) => ({
+    if (!reviews || reviews.length === 0) {
+      return [];
+    }
+
+    // 2. Fetch career titles from admin.careers
+    const careerIds = [...new Set(reviews.map(r => r.career_id))];
+    const { data: careers } = await this.supabaseService.client
+      .schema('admin')
+      .from('careers')
+      .select('career_id, title')
+      .in('career_id', careerIds);
+
+    const careerMap = new Map(careers?.map(c => [c.career_id, c.title]) || []);
+
+    return reviews.map((review: any) => ({
       ...this.mapReview(review),
-      careerTitle: review.career_title || `Career #${review.career_id}`,
+      careerTitle: careerMap.get(review.career_id) || `Career #${review.career_id}`,
     }));
   }
 
