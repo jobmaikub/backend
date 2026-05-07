@@ -36,9 +36,18 @@ interface UpdateCareerData {
 
 @Injectable()
 export class CareersService {
+  private careersCache: any[] | null = null;
+  private lastFetch: number = 0;
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
   constructor(
     private readonly supabaseService: SupabaseService,
   ) { }
+
+  private invalidateCache() {
+    this.careersCache = null;
+    this.lastFetch = 0;
+  }
 
   /* ================= CREATE ================= */
   async createCareer(data: CreateCareerData) {
@@ -85,11 +94,17 @@ export class CareersService {
       throw new BadRequestException(error.message);
     }
 
+    this.invalidateCache();
     return this.mapCareer(result);
   }
 
   /* ================= GET ALL ================= */
   async getCareers() {
+    const now = Date.now();
+    if (this.careersCache && (now - this.lastFetch < this.CACHE_TTL)) {
+      return this.careersCache;
+    }
+
     const { data, error } =
       await this.supabaseService.client
         .schema('admin')
@@ -104,7 +119,11 @@ export class CareersService {
       throw new NotFoundException(error.message);
     }
 
-    return data.map(this.mapCareer);
+    const mappedData = data.map(this.mapCareer);
+    this.careersCache = mappedData;
+    this.lastFetch = now;
+    
+    return mappedData;
   }
 
   /* ================= GET BY ID ================= */
@@ -171,6 +190,7 @@ export class CareersService {
       );
     }
 
+    this.invalidateCache();
     return this.mapCareer(result);
   }
 
@@ -225,6 +245,7 @@ export class CareersService {
       throw new BadRequestException(error.message);
     }
 
+    this.invalidateCache();
     return { success: true };
   }
 

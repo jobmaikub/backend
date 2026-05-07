@@ -39,6 +39,9 @@ export class ReviewsController {
     if (careerId) {
       return this.reviewsService.getReviewsByCareer(Number(careerId), userId);
     }
+    if (userId) {
+      return this.reviewsService.getReviewsByUser(userId);
+    }
     return this.reviewsService.getAllReviews();
   }
 

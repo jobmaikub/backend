@@ -61,161 +61,57 @@ export class TrackProgressService {
     async getStats(authUserId: string, progressUserId?: string | number) {
         const resolvedId = progressUserId ?? authUserId;
 
-        // รันทุก query พร้อมกัน — ไม่มี admin fallback แล้ว
-        const [profileRes, lessons, courseProgress, careerProgress] = await Promise.all([
+        const [profileRes, progressRes] = await Promise.all([
             this.supabaseService.client
                 .from('profiles')
                 .select('courses_completed, lessons_done, total_learning_hours, current_streak')
                 .eq('id', authUserId)
                 .single(),
-            this.fetchLessons(resolvedId),
-            this.fetchCourseProgress(resolvedId),
             this.supabaseService.client
-                .from('user_progress_career')
-                .select('progress')
-                .eq('user_id', resolvedId),
+                .from('view_user_overall_progress')
+                .select('overall_progress')
+                .eq('user_id', resolvedId)
+                .single(),
         ]);
 
         const profile = profileRes.data;
-
-        // lessons count
-        const lessonsDone = lessons.length;
-
-        // courses complete
-        const completedCoursesCount = courseProgress.filter((c: any) =>
-            c?.complete === true || (typeof c?.progress === 'number' && c.progress >= 100)
-        ).length;
-
-        // overall progress
-        let overallProgress = 0;
-        if (!careerProgress.error && careerProgress.data?.length) {
-            const total = careerProgress.data.reduce((s, c) => s + (c.progress || 0), 0);
-            overallProgress = Math.round(total / careerProgress.data.length);
-        } else if (courseProgress.length) {
-            const total = courseProgress.reduce((s: number, r: any) => {
-                if (typeof r.progress === 'number') return s + r.progress;
-                if (r.complete === true) return s + 100;
-                return s;
-            }, 0);
-            overallProgress = Math.round(total / courseProgress.length);
-        }
-
-        // activity heatmap (built from lessons + courses already fetched)
-        const activity = this.buildHeatmap(lessons, courseProgress);
-        const streak = this.calculateStreak(activity);
+        const overallProgress = progressRes.data?.overall_progress ?? 0;
 
         return {
-            coursesComplete: profile?.courses_completed ?? completedCoursesCount,
-            totalLessons: profile?.lessons_done ?? lessonsDone,
+            coursesComplete: profile?.courses_completed ?? 0,
+            totalLessons: profile?.lessons_done ?? 0,
             totalHours: profile?.total_learning_hours ?? 0,
-            streak: profile?.current_streak ?? streak,
+            streak: profile?.current_streak ?? 0,
             overallProgress,
         };
     }
 
     async getActivityHeatmap(userId: string | number) {
-        const [lessons, courses] = await Promise.all([
-            this.fetchLessons(userId),
-            this.fetchCourseProgress(userId),
-        ]);
-        return this.buildHeatmap(lessons, courses.filter((c: any) => c?.complete === true));
-    }
-
-    private buildHeatmap(lessons: any[], completedCourses: any[]) {
-        const map: Record<string, { lessons: number; courses: Set<number>; count: number }> = {};
-
-        lessons.forEach((item: any) => {
-            const date = this.extractActivityDate(item);
-            if (!date) return;
-            if (!map[date]) map[date] = { lessons: 0, courses: new Set(), count: 0 };
-            map[date].count += 1;
-            map[date].lessons += 1;
-        });
-
-        completedCourses.forEach((item: any) => {
-            const date = this.extractActivityDate(item);
-            if (!date) return;
-            if (!map[date]) map[date] = { lessons: 0, courses: new Set(), count: 0 };
-            const id = item.user_progress_course_id ?? item.course_id;
-            if (id) map[date].courses.add(id);
-        });
-
-        return Object.entries(map)
-            .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-            .map(([date, val]) => ({
-                date,
-                count: val.count,
-                lessons: val.lessons,
-                courses: val.courses.size,
-            }));
-    }
-
-    private calculateStreak(activity: { date: string }[]) {
-        if (!activity.length) return 0;
-        const daySet = new Set(activity.map((a) => a.date));
-        let streak = 0;
-        const cursor = new Date();
-        while (true) {
-            const key = cursor.toISOString().split('T')[0];
-            if (!daySet.has(key)) break;
-            streak += 1;
-            cursor.setDate(cursor.getDate() - 1);
-        }
-        return streak;
+        const { data, error } = await this.supabaseService.client
+            .from('view_user_activity_summary')
+            .select('*')
+            .eq('user_id', userId)
+            .order('date', { ascending: true });
+        
+        return error ? [] : data;
     }
 
     async getActivity(userId: string | number) {
-        const { data, error } = await this.supabaseService.client
-            .from('user_progress_lesson')
-            .select('done_at, created_at, updated_at')
-            .eq('user_id', userId);
-        if (error) return [];
-        const map: Record<string, number> = {};
-        data.forEach((item: any) => {
-            const date = this.extractActivityDate(item);
-            if (!date) return;
-            map[date] = (map[date] || 0) + 1;
-        });
-        return Object.entries(map).map(([date, count]) => ({ date, count }));
+        return this.getActivityHeatmap(userId);
     }
 
     async getCompletedCourses(userId: string | number) {
-        // 1. Fetch progress records from public schema
-        const { data: progressData, error: progressError } = await this.supabaseService.client
-            .from('user_progress_course')
-            .select(`
-                user_progress_course_id,
-                progress,
-                complete,
-                course_id
-            `)
+        const { data, error } = await this.supabaseService.client
+            .from('view_user_completed_courses')
+            .select('*')
             .eq('user_id', userId);
 
-        if (progressError || !progressData) return [];
-
-        // 2. Fetch course details from admin schema
-        const courseIds = progressData.map(p => p.course_id);
-        let coursesDetails: any[] = [];
-        if (courseIds.length > 0) {
-            const { data } = await this.supabaseService.client.schema('admin')
-                .from('courses')
-                .select('course_id, title, description')
-                .in('course_id', courseIds);
-            if (data) coursesDetails = data;
+        if (error) {
+            console.error('getCompletedCourses error:', error.message);
+            return [];
         }
 
-        // 3. Merge and return
-        return progressData.map((p) => {
-            const detail = coursesDetails.find(d => d.course_id === p.course_id);
-            return {
-                id: p.user_progress_course_id,
-                progress: p.progress,
-                courseId: p.course_id,
-                complete: p.complete,
-                title: detail?.title || 'Unknown Course',
-                description: detail?.description || '',
-            };
-        });
+        return data || [];
     }
 
     async getOverallProgress(userId: string | number) {
@@ -242,91 +138,18 @@ export class TrackProgressService {
     }
 
     async getEnrichedSkills(userId: string | number) {
-        // 1. Get completed course IDs and their update dates
-        const { data: completedCourses, error: progressError } = await this.supabaseService.client
-            .from('user_progress_course')
-            .select('course_id, updated_at')
+        const { data, error } = await this.supabaseService.client
+            .from('view_user_enriched_skills')
+            .select('*')
             .eq('user_id', userId)
-            .eq('complete', true);
+            .order('level', { ascending: false }) 
+            .order('lastUpdated', { ascending: false });
 
-        if (progressError || !completedCourses?.length) return [];
-
-        const courseIds = completedCourses.map(c => c.course_id);
-        const courseUpdateMap = new Map(completedCourses.map(c => [c.course_id, c.updated_at]));
-
-        // 2. Get course details (skills_taught, level, career_id) from admin schema
-        const { data: courses } = await this.supabaseService.client.schema('admin')
-            .from('courses')
-            .select('course_id, title, level, skills_taught, career_id')
-            .in('course_id', courseIds);
-
-        if (!courses?.length) return [];
-
-        // 3. Get career titles
-        const careerIds = [...new Set(courses.map((c: any) => c.career_id))];
-        const { data: careers } = await this.supabaseService.client.schema('admin')
-            .from('careers')
-            .select('career_id, title')
-            .in('career_id', careerIds);
-
-        const careerMap = new Map((careers ?? []).map((c: any) => [c.career_id, c.title]));
-
-        // Level rank for determining highest achieved level
-        const levelRank: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3 };
-
-        // 4. Aggregate skills across courses
-        const skillMap: Record<string, {
-            name: string;
-            level: string;
-            courseCount: number;
-            careers: Set<string>;
-            lastUpdated: string | null;
-        }> = {};
-
-        for (const course of courses as any[]) {
-            if (!Array.isArray(course.skills_taught)) continue;
-            const careerTitle = careerMap.get(course.career_id) || 'General';
-            const updatedAt = courseUpdateMap.get(course.course_id) || null;
-
-            for (const skill of course.skills_taught) {
-                if (!skill) continue;
-                if (!skillMap[skill]) {
-                    skillMap[skill] = { name: skill, level: course.level, courseCount: 0, careers: new Set(), lastUpdated: updatedAt };
-                }
-                skillMap[skill].courseCount += 1;
-                skillMap[skill].careers.add(careerTitle);
-
-                // Update last updated if this course is more recent
-                if (updatedAt && (!skillMap[skill].lastUpdated || new Date(updatedAt) > new Date(skillMap[skill].lastUpdated))) {
-                    skillMap[skill].lastUpdated = updatedAt;
-                }
-
-                // Upgrade level if this course is higher ranked
-                if ((levelRank[course.level] ?? 0) > (levelRank[skillMap[skill].level] ?? 0)) {
-                    skillMap[skill].level = course.level;
-                }
-            }
+        if (error) {
+            console.error('getEnrichedSkills error:', error.message);
+            return [];
         }
 
-        // 5. Sort: advanced first, then by last updated, then by course count
-        return Object.values(skillMap)
-            .map(s => ({
-                name: s.name,
-                level: s.level,
-                courseCount: s.courseCount,
-                careers: [...s.careers],
-                lastUpdated: s.lastUpdated,
-            }))
-            .sort((a, b) => {
-                const levelDiff = (levelRank[b.level] ?? 0) - (levelRank[a.level] ?? 0);
-                if (levelDiff !== 0) return levelDiff;
-                
-                // If same level, more recent first
-                if (a.lastUpdated && b.lastUpdated) {
-                    return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
-                }
-                
-                return b.courseCount - a.courseCount;
-            });
+        return data || [];
     }
 }

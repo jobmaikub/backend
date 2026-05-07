@@ -16,6 +16,15 @@ export class NewsService {
     private readonly supabaseService: SupabaseService,
   ) {}
 
+  private newsCache: any[] | null = null;
+  private lastFetch: number = 0;
+  private readonly CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+  private invalidateCache() {
+    this.newsCache = null;
+    this.lastFetch = 0;
+  }
+
   // ==========================================
   // EXISTING CRUD METHODS
   // ==========================================
@@ -48,10 +57,16 @@ export class NewsService {
         .single();
 
     if (error) throw new BadRequestException(error.message);
+    this.invalidateCache();
     return result;
   }
 
   async getNews() {
+    const now = Date.now();
+    if (this.newsCache && (now - this.lastFetch < this.CACHE_TTL)) {
+      return this.newsCache;
+    }
+
     const { data, error } =
       await this.supabaseService.client
         .schema('admin')
@@ -63,6 +78,9 @@ export class NewsService {
         .order('news_id', { ascending: true });
 
     if (error) throw new NotFoundException(error.message);
+    
+    this.newsCache = data;
+    this.lastFetch = now;
     return data;
   }
 
@@ -165,6 +183,7 @@ export class NewsService {
       );
     }
 
+    this.invalidateCache();
     return result;
   }
 
@@ -177,6 +196,7 @@ export class NewsService {
         .eq('news_id', newsId);
 
     if (error) throw new NotFoundException(error.message);
+    this.invalidateCache();
     return { success: true };
   }
 
@@ -243,6 +263,7 @@ export class NewsService {
         }
       }
     }
+    this.invalidateCache();
     this.logger.log('Daily news fetch complete!');
   }
 }

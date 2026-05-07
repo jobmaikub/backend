@@ -16,8 +16,14 @@ export class HomeController {
   }
 
   @Get('all-careers')
-  getAllCareers() {
-    return this.homeService.getAllCareers();
+  getAllCareers(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.homeService.getAllCareers(
+      limit ? Number(limit) : 100,
+      offset ? Number(offset) : 0,
+    );
   }
 
   @Get('careers/:id')

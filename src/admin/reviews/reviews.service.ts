@@ -73,6 +73,24 @@ export class ReviewsService {
     return data.map((review) => this.mapReview(review));
   }
 
+  /* ================= GET REVIEWS BY USER ================= */
+  async getReviewsByUser(userId: string) {
+    const { data, error } = await this.supabaseService.client
+      .from('view_user_reviews')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new NotFoundException(error.message);
+    }
+
+    return (data || []).map((review: any) => ({
+      ...this.mapReview(review),
+      careerTitle: review.career_title || `Career #${review.career_id}`,
+    }));
+  }
+
   /* ================= GET REVIEWS BY CAREER ================= */
   async getReviewsByCareer(careerId: number, userId?: string) {
     const { data: reviews, error } = await this.supabaseService.client

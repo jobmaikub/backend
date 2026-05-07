@@ -27,12 +27,13 @@ export class HomeService {
     return (data || []).map(this.mapCareer);
   }
 
-  async getAllCareers() {
+  async getAllCareers(limit = 100, offset = 0) {
     const { data, error } = await this.supabaseService.client
       .schema('admin')
       .from('careers')
       .select(`*, industries(name)`)
-      .order('career_id', { ascending: true });
+      .order('career_id', { ascending: true })
+      .range(offset, offset + limit - 1);
 
     if (error) throw new NotFoundException(error.message);
     return (data || []).map(this.mapCareer);
