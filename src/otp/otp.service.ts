@@ -63,7 +63,8 @@ export class OtpService {
         description = 'Click the button below to verify your account and start your journey.'
         
         // 1. Check if user already exists
-        const { data: { user: existingUser } } = await this.supabaseAdmin.auth.admin.getUserByEmail(email)
+        const { data: { users }, error: listError } = await this.supabaseAdmin.auth.admin.listUsers()
+        const existingUser = users.find(u => u.email === email)
 
         if (existingUser) {
           // Case A: User is already confirmed
