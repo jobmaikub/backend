@@ -92,7 +92,7 @@ export class AiService {
       interests_detail: (interests || []).map(i => i.interest_name),
     };
 
-    // 2.5. Fetch required skills for the top 3 careers from DB to prevent AI hallucination
+    // 2.5. Fetch required skills for the top 5 careers from DB to prevent AI hallucination
     if (data && data.length > 0) {
       const careerIds = data.map(c => c.career_id || c.id).filter(id => id != null);
 
@@ -218,9 +218,9 @@ export class AiService {
 
     // 4. บันทึกลงประวัติ (ถ้ามี user_id)
     if (user.user_id && results.length > 0) {
-      const top3 = [...results]
+      const top5 = [...results]
         .sort((a, b) => Number(b.match_score ?? b.score ?? 0) - Number(a.match_score ?? a.score ?? 0))
-        .slice(0, 3);
+        .slice(0, 5);
 
       // ลบ history เก่าของ user นี้ก่อน (ป้องกัน duplicate และ sequence desync)
       await this.supabase.client
@@ -229,7 +229,7 @@ export class AiService {
         .eq('user_id', user.user_id);
 
       // Insert ผลลัพธ์ใหม่ พร้อม selection ที่ user เลือก
-      const inserts = top3.map(res => ({
+      const inserts = top5.map(res => ({
         user_id: user.user_id,
         career_id: res.career_id || res.id,
         score: Number(res.match_score ?? res.score ?? 0),
@@ -261,7 +261,7 @@ export class AiService {
       .select('id, career_id, score, explanation, matching_skills, skills_to_develop, faculty_id, major_id, skill_ids, interest_ids')
       .eq('user_id', userId)
       .order('id', { ascending: false })
-      .limit(3);
+      .limit(5);
 
     if (error || !matches || matches.length === 0) return [];
 

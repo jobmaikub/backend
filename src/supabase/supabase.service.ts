@@ -57,7 +57,7 @@ Example format:
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           responseMimeType: "application/json",
-          maxOutputTokens: 600,
+          maxOutputTokens: 1000,
         }
       });
 
