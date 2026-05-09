@@ -8,12 +8,12 @@ export class OtpController {
   @Post('send')
   async sendOtp(@Body() body: { email: string, type?: 'reset' | 'signup' | 'welcome', password?: string, full_name?: string }) {
     try {
-      const success = await this.otpService.sendOtpEmail(body.email, body.type, {
+      const result = await this.otpService.sendOtpEmail(body.email, body.type, {
         password: body.password,
         full_name: body.full_name
       })
-      if (!success) {
-        return { success: false, error: 'Failed to send email' }
+      if (!result.success) {
+        return { success: false, error: result.message || 'Failed to send email' }
       }
       return { success: true, message: 'Email sent successfully' }
     } catch (error) {
