@@ -6,13 +6,16 @@ export class OtpController {
   constructor(private otpService: OtpService) {}
 
   @Post('send')
-  async sendOtp(@Body() body: { email: string }) {
+  async sendOtp(@Body() body: { email: string, type?: 'reset' | 'signup' | 'welcome', password?: string, full_name?: string }) {
     try {
-      const success = await this.otpService.sendOtpEmail(body.email)
+      const success = await this.otpService.sendOtpEmail(body.email, body.type, {
+        password: body.password,
+        full_name: body.full_name
+      })
       if (!success) {
-        return { success: false, error: 'Failed to send OTP email' }
+        return { success: false, error: 'Failed to send email' }
       }
-      return { success: true, message: 'OTP sent to email' }
+      return { success: true, message: 'Email sent successfully' }
     } catch (error) {
       return { success: false, error: error.message }
     }
