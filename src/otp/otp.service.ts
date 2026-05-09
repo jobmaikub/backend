@@ -45,7 +45,7 @@ export class OtpService {
   }
 
   // Send OTP or Link via Resend
-  async sendOtpEmail(email: string, type: 'reset' | 'signup' | 'welcome' = 'reset', metadata?: any): Promise<{ success: boolean; message?: string }> {
+  async sendOtpEmail(email: string, type: 'reset' | 'signup' | 'welcome' = 'reset', metadata?: any): Promise<boolean> {
     const code = this.generateOtp()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
@@ -70,7 +70,8 @@ export class OtpService {
           // Case A: User is already confirmed
           if (existingUser.email_confirmed_at) {
             console.log(`User ${email} is already confirmed.`)
-            return { success: false, message: 'User already registered and confirmed. Please sign in.' }
+            // We can either send a welcome email or just return false/error
+            return false // Or handle as special case
           }
 
           // Case B: User exists but not confirmed - Update password if provided and send magiclink
@@ -91,7 +92,7 @@ export class OtpService {
 
           if (magicError) {
             console.error('❌ Error generating magiclink for existing user:', magicError)
-            return { success: false, message: 'Failed to generate verification link' }
+            return false
           }
           actionLink = magicData.properties.action_link
         } else {
@@ -115,7 +116,7 @@ export class OtpService {
 
           if (signupError) {
             console.error('❌ Error generating signup link:', signupError)
-            return { success: false, message: 'Failed to generate signup link' }
+            return false
           }
           actionLink = signupData.properties.action_link
         }
@@ -142,7 +143,7 @@ export class OtpService {
 
         if (insertError) {
           console.error('❌ Database insert error:', insertError)
-          return { success: false, message: 'Failed to store OTP' }
+          return false
         }
       }
 
@@ -189,13 +190,13 @@ export class OtpService {
         console.log(`${type} email sent via Resend to ${email}`)
       } catch (mailError) {
         console.warn('Email send failed:', mailError)
-        return { success: false, message: 'Failed to deliver email' }
+        return false
       }
 
-      return { success: true }
+      return true
     } catch (error) {
       console.error('Email service error:', error)
-      return { success: false, message: 'Internal server error' }
+      return false
     }
   }
 
