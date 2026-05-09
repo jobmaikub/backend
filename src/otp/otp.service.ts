@@ -86,7 +86,7 @@ export class OtpService {
             type: 'magiclink',
             email: email,
             options: {
-              redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?verified=true`
+              redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-success`
             }
           })
 
@@ -110,7 +110,7 @@ export class OtpService {
             type: 'signup',
             email: email,
             options: {
-              redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?verified=true`
+              redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/home?verified=true`
             }
           })
 
