@@ -46,7 +46,7 @@ export class AppController {
   @Get('user-dashboard/:id')
   async getUserDashboard(@Param('id') id: string) {
     try {
-      console.log(`[Dashboard] Fetching data for user: ${id}`);
+      // console.log(`[Dashboard] Fetching data for user: ${id}`);
       const [profileRes, skills, reviews] = await Promise.all([
         this.supabaseService.client
           .from('profiles')
@@ -62,7 +62,7 @@ export class AppController {
         throw new NotFoundException('User profile not found');
       }
 
-      console.log(`[Dashboard] Found ${skills?.length || 0} skills and ${reviews?.length || 0} reviews for ${id}`);
+      // console.log(`[Dashboard] Found ${skills?.length || 0} skills and ${reviews?.length || 0} reviews for ${id}`);
 
       return {
         profile: profileRes.data,

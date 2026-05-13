@@ -52,7 +52,7 @@ export class HomeService {
   }
 
   async getIndustryNews(limit = 10, industry?: string) {
-    console.log(`[HomeService] Fetching news (limit: ${limit}, industry: ${industry || 'all'})...`);
+    // console.log(`[HomeService] Fetching news (limit: ${limit}, industry: ${industry || 'all'})...`);
     
     try {
       // Build query for admin schema
