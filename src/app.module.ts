@@ -23,6 +23,7 @@ import { OtpModule } from './otp/otp.module';
 import { TrackProgressModule } from './progresss/track_progress/track_progress.module';
 import { ReviewsModule } from './admin/reviews/reviews.module';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { StatsModule } from './admin/stats/stats.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
     ReviewsModule,
     BookmarksModule,
     OtpModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

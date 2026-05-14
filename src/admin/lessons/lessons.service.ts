@@ -31,15 +31,29 @@ export class LessonsService {
   }
 
   async getLessons() {
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')  
-        .from('lessons')
-        .select('*')
-        .order('lesson_order', { ascending: true });
+    let allData: any[] = [];
+    let from = 0;
+    const step = 1000;
 
-    if (error) throw new NotFoundException(error.message);
-    return data;
+    while (true) {
+      const { data, error } =
+        await this.supabaseService.client
+          .schema('admin')
+          .from('lessons')
+          .select('*')
+          .order('lesson_order', { ascending: true })
+          .order('lesson_id', { ascending: true }) // Tie-breaker for stable pagination
+          .range(from, from + step - 1);
+
+      if (error) throw new NotFoundException(error.message);
+      if (!data || data.length === 0) break;
+
+      allData = allData.concat(data);
+      if (data.length < step) break;
+      from += step;
+    }
+
+    return allData;
   }
 
   async getLessonById(lessonId: number) {
