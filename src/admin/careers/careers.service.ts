@@ -40,9 +40,7 @@ export class CareersService {
   private lastFetch: number = 0;
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  constructor(
-    private readonly supabaseService: SupabaseService,
-  ) { }
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   private invalidateCache() {
     this.careersCache = null;
@@ -63,9 +61,10 @@ export class CareersService {
       throw new BadRequestException(lastRowsError.message);
     }
 
-    const nextCareerId = (Array.isArray(lastRows) && lastRows.length > 0)
-      ? Number(lastRows[0].career_id) + 1
-      : 1;
+    const nextCareerId =
+      Array.isArray(lastRows) && lastRows.length > 0
+        ? Number(lastRows[0].career_id) + 1
+        : 1;
 
     const payload: CreateCareerData = {
       ...data,
@@ -79,16 +78,17 @@ export class CareersService {
       duration: data.duration ?? 0,
     };
 
-    const { data: result, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('careers')
-        .insert(payload)
-        .select(`
+    const { data: result, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('careers')
+      .insert(payload)
+      .select(
+        `
         *,
         industries(name)
-      `)
-        .single();
+      `,
+      )
+      .single();
 
     if (error) {
       throw new BadRequestException(error.message);
@@ -101,19 +101,20 @@ export class CareersService {
   /* ================= GET ALL ================= */
   async getCareers() {
     const now = Date.now();
-    if (this.careersCache && (now - this.lastFetch < this.CACHE_TTL)) {
+    if (this.careersCache && now - this.lastFetch < this.CACHE_TTL) {
       return this.careersCache;
     }
 
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('careers')
-        .select(`
+    const { data, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('careers')
+      .select(
+        `
           *,
           industries(name)
-        `)
-        .order('career_id', { ascending: true });
+        `,
+      )
+      .order('career_id', { ascending: true });
 
     if (error) {
       throw new NotFoundException(error.message);
@@ -122,22 +123,23 @@ export class CareersService {
     const mappedData = data.map(this.mapCareer);
     this.careersCache = mappedData;
     this.lastFetch = now;
-    
+
     return mappedData;
   }
 
   /* ================= GET BY ID ================= */
   async getCareerById(careerId: number) {
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('careers')
-        .select(`
+    const { data, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('careers')
+      .select(
+        `
           *,
           industries(name)
-        `)
-        .eq('career_id', careerId)
-        .single();
+        `,
+      )
+      .eq('career_id', careerId)
+      .single();
 
     if (error || !data) {
       throw new NotFoundException('Career not found');
@@ -148,16 +150,16 @@ export class CareersService {
 
   /* ================= FILTER BY INDUSTRY ================= */
   async getCareersByIndustry(industryId: number) {
-
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('careers')
-        .select(`
+    const { data, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('careers')
+      .select(
+        `
         *,
         industries(name)
-      `)
-        .eq('industry_id', industryId);
+      `,
+      )
+      .eq('industry_id', industryId);
 
     if (error) {
       throw new NotFoundException(error.message);
@@ -172,22 +174,21 @@ export class CareersService {
       ...data,
     };
 
-    const { data: result, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('careers')
-        .update(payload)
-        .eq('career_id', careerId)
-        .select(`
+    const { data: result, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('careers')
+      .update(payload)
+      .eq('career_id', careerId)
+      .select(
+        `
         *,
         industries(name)
-      `)
-        .single();
+      `,
+      )
+      .single();
 
     if (error || !result) {
-      throw new NotFoundException(
-        error?.message || 'Career not found',
-      );
+      throw new NotFoundException(error?.message || 'Career not found');
     }
 
     this.invalidateCache();
@@ -196,12 +197,11 @@ export class CareersService {
 
   /* ================= DELETE ================= */
   async deleteCareer(careerId: number) {
-    const { error: deleteSkillLinksError } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('career_skills')
-        .delete()
-        .eq('career_id', careerId);
+    const { error: deleteSkillLinksError } = await this.supabaseService.client
+      .schema('admin')
+      .from('career_skills')
+      .delete()
+      .eq('career_id', careerId);
 
     if (deleteSkillLinksError) {
       throw new BadRequestException(deleteSkillLinksError.message);
@@ -231,15 +231,16 @@ export class CareersService {
     }
 
     if (Array.isArray(linkedCourses) && linkedCourses.length > 0) {
-      throw new BadRequestException('Cannot delete career with linked courses. Please delete related courses first.');
+      throw new BadRequestException(
+        'Cannot delete career with linked courses. Please delete related courses first.',
+      );
     }
 
-    const { error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('careers')
-        .delete()
-        .eq('career_id', careerId);
+    const { error } = await this.supabaseService.client
+      .schema('admin')
+      .from('careers')
+      .delete()
+      .eq('career_id', careerId);
 
     if (error) {
       throw new BadRequestException(error.message);
@@ -251,15 +252,16 @@ export class CareersService {
 
   /* ================= CAREER SKILLS ================= */
   async getCareerSkills(careerId: number) {
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('career_skills')
-        .select(`
+    const { data, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('career_skills')
+      .select(
+        `
           skill_id,
           skills(skill_id, name, category)
-        `)
-        .eq('career_id', careerId);
+        `,
+      )
+      .eq('career_id', careerId);
 
     if (error) {
       throw new NotFoundException(error.message);
@@ -269,13 +271,12 @@ export class CareersService {
   }
 
   async addCareerSkill(careerId: number, skillId: number) {
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('career_skills')
-        .insert({ career_id: careerId, skill_id: skillId })
-        .select()
-        .single();
+    const { data, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('career_skills')
+      .insert({ career_id: careerId, skill_id: skillId })
+      .select()
+      .single();
 
     if (error) {
       throw new BadRequestException(error.message);
@@ -285,13 +286,12 @@ export class CareersService {
   }
 
   async removeCareerSkill(careerId: number, skillId: number) {
-    const { error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('career_skills')
-        .delete()
-        .eq('career_id', careerId)
-        .eq('skill_id', skillId);
+    const { error } = await this.supabaseService.client
+      .schema('admin')
+      .from('career_skills')
+      .delete()
+      .eq('career_id', careerId)
+      .eq('skill_id', skillId);
 
     if (error) {
       throw new NotFoundException(error.message);
@@ -302,15 +302,16 @@ export class CareersService {
 
   /* ================= CAREER INTERESTS ================= */
   async getCareerInterests(careerId: number) {
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('career_interests')
-        .select(`
+    const { data, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('career_interests')
+      .select(
+        `
           interest_id,
           interests(interest_id, interest_name)
-        `)
-        .eq('career_id', careerId);
+        `,
+      )
+      .eq('career_id', careerId);
 
     if (error) {
       throw new NotFoundException(error.message);
@@ -320,13 +321,12 @@ export class CareersService {
   }
 
   async addCareerInterest(careerId: number, interestId: number) {
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('career_interests')
-        .insert({ career_id: careerId, interest_id: interestId })
-        .select()
-        .single();
+    const { data, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('career_interests')
+      .insert({ career_id: careerId, interest_id: interestId })
+      .select()
+      .single();
 
     if (error) {
       throw new BadRequestException(error.message);
@@ -336,13 +336,12 @@ export class CareersService {
   }
 
   async removeCareerInterest(careerId: number, interestId: number) {
-    const { error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('career_interests')
-        .delete()
-        .eq('career_id', careerId)
-        .eq('interest_id', interestId);
+    const { error } = await this.supabaseService.client
+      .schema('admin')
+      .from('career_interests')
+      .delete()
+      .eq('career_id', careerId)
+      .eq('interest_id', interestId);
 
     if (error) {
       throw new NotFoundException(error.message);

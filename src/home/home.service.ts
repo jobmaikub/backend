@@ -53,7 +53,7 @@ export class HomeService {
 
   async getIndustryNews(limit = 10, industry?: string) {
     // console.log(`[HomeService] Fetching news (limit: ${limit}, industry: ${industry || 'all'})...`);
-    
+
     try {
       // Build query for admin schema
       let query = this.supabaseService.client
@@ -71,9 +71,9 @@ export class HomeService {
       const { data: adminData, error: adminError } = await query;
 
       if (!adminError && adminData && adminData.length > 0) {
-        return adminData.map(item => ({
+        return adminData.map((item) => ({
           ...item,
-          industry: (item as any).industries?.name || 'All Industries'
+          industry: item.industries?.name || 'All Industries',
         }));
       }
 
@@ -92,26 +92,31 @@ export class HomeService {
 
       if (publicError) {
         // If filtering failed, maybe try without filter as a last resort
-        console.warn('[HomeService] Filtered fetch failed, trying without filter...');
+        console.warn(
+          '[HomeService] Filtered fetch failed, trying without filter...',
+        );
         const { data: allData } = await this.supabaseService.client
           .from('news')
           .select('*, industries(name)')
           .order('news_id', { ascending: false })
           .limit(limit);
-        
-        return (allData || []).map(item => ({
+
+        return (allData || []).map((item) => ({
           ...item,
-          industry: (item as any).industries?.name || 'All Industries'
+          industry: item.industries?.name || 'All Industries',
         }));
       }
-      
-      return (publicData || []).map(item => ({
+
+      return (publicData || []).map((item) => ({
         ...item,
-        industry: (item as any).industries?.name || 'All Industries'
+        industry: item.industries?.name || 'All Industries',
       }));
     } catch (error) {
       if (error instanceof Error) {
-        console.error('[HomeService] Critical error in getIndustryNews:', error.message);
+        console.error(
+          '[HomeService] Critical error in getIndustryNews:',
+          error.message,
+        );
       } else {
         console.error('[HomeService] An unexpected error occurred:', error);
       }

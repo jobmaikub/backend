@@ -7,7 +7,7 @@ import { SupabaseService } from '../../supabase/supabase.service';
 
 @Injectable()
 export class MajorsService {
-  constructor(private readonly supabase: SupabaseService) { }
+  constructor(private readonly supabase: SupabaseService) {}
 
   async create(data: {
     eng_name: string;
@@ -20,10 +20,9 @@ export class MajorsService {
 
     if (idError) throw new BadRequestException(idError.message);
 
-    const nextMajorId =
-      Array.isArray(rpcData)
-        ? rpcData[0]?.next_id
-        : rpcData?.next_id;
+    const nextMajorId = Array.isArray(rpcData)
+      ? rpcData[0]?.next_id
+      : rpcData?.next_id;
 
     if (!nextMajorId) {
       throw new BadRequestException('Cannot generate major_id');
@@ -61,7 +60,7 @@ export class MajorsService {
       th_name?: string;
       description?: string;
       faculty_id?: number;
-    }>
+    }>,
   ) {
     console.log('UPDATE MAJOR:', { id, data });
 

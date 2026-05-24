@@ -8,4 +8,4 @@ import { SupabaseModule } from '../supabase/supabase.module';
   controllers: [AiController],
   providers: [AiService],
 })
-export class AiModule { }
+export class AiModule {}

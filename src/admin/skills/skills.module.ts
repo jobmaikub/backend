@@ -4,7 +4,7 @@ import { SkillsService } from './skills.service';
 import { SupabaseModule } from '../../supabase/supabase.module';
 
 @Module({
-  imports: [SupabaseModule], 
+  imports: [SupabaseModule],
   controllers: [SkillsController],
   providers: [SkillsService],
 })

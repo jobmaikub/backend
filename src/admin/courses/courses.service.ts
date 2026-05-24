@@ -20,9 +20,7 @@ type CoursePayload = {
 
 @Injectable()
 export class CoursesService {
-  constructor(
-    private readonly supabaseService: SupabaseService,
-  ) { }
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   private normalizeLevel(value?: string) {
     if (!value) return undefined;
@@ -39,32 +37,36 @@ export class CoursesService {
       duration_mins: data.duration_mins ?? 0,
       course_order: data.course_order,
       image_url: data.image_url,
-      skills_taught: Array.isArray(data.skills_taught) ? data.skills_taught : [],
-      learning_outcome: Array.isArray(data.learning_outcome) ? data.learning_outcome : [],
+      skills_taught: Array.isArray(data.skills_taught)
+        ? data.skills_taught
+        : [],
+      learning_outcome: Array.isArray(data.learning_outcome)
+        ? data.learning_outcome
+        : [],
     };
 
     Object.keys(payload).forEach(
-      (key) => (payload as any)[key] === undefined && delete (payload as any)[key]
+      (key) =>
+        (payload as any)[key] === undefined && delete (payload as any)[key],
     );
 
-    const { data: result, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('courses')
-        .insert(payload)
-        .select()
-        .single();
+    const { data: result, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('courses')
+      .insert(payload)
+      .select()
+      .single();
 
     if (error) throw new BadRequestException(error.message);
     return result;
   }
 
   async getCourses() {
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('courses')
-        .select(`
+    const { data, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('courses')
+      .select(
+        `
           course_id,
           title,
           description,
@@ -80,31 +82,31 @@ export class CoursesService {
             career_id,
             title
           )
-        `)
-        .order('course_order', { ascending: true });
+        `,
+      )
+      .order('course_order', { ascending: true });
 
     if (error) throw new NotFoundException(error.message);
     return data?.map((course: any) => {
       const careerTitle = Array.isArray(course.careers)
         ? course.careers[0]?.title
         : course.careers?.title;
-      
+
       return {
         ...course,
         career_path: course.career_path,
-        career_name: careerTitle || `Career #${course.career_id}`
+        career_name: careerTitle || `Career #${course.career_id}`,
       };
     });
   }
 
   async getCourseById(courseId: number) {
-    const { data, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('courses')
-        .select('*')
-        .eq('course_id', courseId)
-        .single();
+    const { data, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('courses')
+      .select('*')
+      .eq('course_id', courseId)
+      .single();
 
     if (error || !data) {
       throw new NotFoundException('Course not found');
@@ -128,29 +130,27 @@ export class CoursesService {
     };
 
     Object.keys(payload).forEach(
-      (key) => payload[key] === undefined && delete payload[key]
+      (key) => payload[key] === undefined && delete payload[key],
     );
 
-    const { data: result, error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('courses')
-        .update(payload)
-        .eq('course_id', courseId)
-        .select()
-        .single();
+    const { data: result, error } = await this.supabaseService.client
+      .schema('admin')
+      .from('courses')
+      .update(payload)
+      .eq('course_id', courseId)
+      .select()
+      .single();
 
     if (error) throw new BadRequestException(error.message);
     return result;
   }
 
   async deleteCourse(courseId: number) {
-    const { error } =
-      await this.supabaseService.client
-        .schema('admin')
-        .from('courses')
-        .delete()
-        .eq('course_id', courseId);
+    const { error } = await this.supabaseService.client
+      .schema('admin')
+      .from('courses')
+      .delete()
+      .eq('course_id', courseId);
 
     if (error) throw new NotFoundException(error.message);
     return { success: true };

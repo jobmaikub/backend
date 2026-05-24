@@ -7,9 +7,7 @@ import { SupabaseService } from '../../supabase/supabase.service';
 
 @Injectable()
 export class BanUsersService {
-  constructor(
-    private readonly supabaseService: SupabaseService,
-  ) { }
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   async banUser(data: {
     user_id: string;
@@ -38,17 +36,16 @@ export class BanUsersService {
       throw new BadRequestException('User is already banned');
     }
 
-    const { data: result, error } =
-      await this.supabaseService.client
-        .from('ban_users')
-        .insert({
-          user_id: data.user_id,
-          reason: data.reason,
-          unban_date: data.unban_date ?? null,
-          created_by: data.created_by ?? null,
-        })
-        .select()
-        .single();
+    const { data: result, error } = await this.supabaseService.client
+      .from('ban_users')
+      .insert({
+        user_id: data.user_id,
+        reason: data.reason,
+        unban_date: data.unban_date ?? null,
+        created_by: data.created_by ?? null,
+      })
+      .select()
+      .single();
 
     if (error) throw new BadRequestException(error.message);
 
@@ -66,23 +63,21 @@ export class BanUsersService {
   }
 
   async getBans() {
-    const { data, error } =
-      await this.supabaseService.client
-        .from('ban_users')
-        .select('*')
-        .order('ban_date', { ascending: false });
+    const { data, error } = await this.supabaseService.client
+      .from('ban_users')
+      .select('*')
+      .order('ban_date', { ascending: false });
 
     if (error) throw new NotFoundException(error.message);
     return data;
   }
 
   async getBanById(banId: string) {
-    const { data, error } =
-      await this.supabaseService.client
-        .from('ban_users')
-        .select('*')
-        .eq('ban_id', banId)
-        .single();
+    const { data, error } = await this.supabaseService.client
+      .from('ban_users')
+      .select('*')
+      .eq('ban_id', banId)
+      .single();
 
     if (error || !data) {
       throw new NotFoundException('Ban record not found');
@@ -92,12 +87,11 @@ export class BanUsersService {
   }
 
   async getBansByUserId(userId: string) {
-    const { data, error } =
-      await this.supabaseService.client
-        .from('ban_users')
-        .select('*')
-        .eq('user_id', userId)
-        .order('ban_date', { ascending: false });
+    const { data, error } = await this.supabaseService.client
+      .from('ban_users')
+      .select('*')
+      .eq('user_id', userId)
+      .order('ban_date', { ascending: false });
 
     if (error) throw new NotFoundException(error.message);
     if (!data || data.length === 0) {
@@ -110,14 +104,13 @@ export class BanUsersService {
   async getActiveBanByUserId(userId: string) {
     const nowIso = new Date().toISOString();
 
-    const { data, error } =
-      await this.supabaseService.client
-        .from('ban_users')
-        .select('*')
-        .eq('user_id', userId)
-        .or(`unban_date.is.null,unban_date.gt.${nowIso}`)
-        .order('ban_date', { ascending: false })
-        .limit(1);
+    const { data, error } = await this.supabaseService.client
+      .from('ban_users')
+      .select('*')
+      .eq('user_id', userId)
+      .or(`unban_date.is.null,unban_date.gt.${nowIso}`)
+      .order('ban_date', { ascending: false })
+      .limit(1);
 
     if (error) {
       throw new BadRequestException(error.message);
@@ -158,7 +151,9 @@ export class BanUsersService {
     }
 
     if (!updatedBans || updatedBans.length === 0) {
-      return { message: 'No active ban row found. Profile unbanned successfully.' };
+      return {
+        message: 'No active ban row found. Profile unbanned successfully.',
+      };
     }
 
     return {
@@ -169,21 +164,19 @@ export class BanUsersService {
   }
 
   async deleteBan(banId: string) {
-    const { data: ban, error: findError } =
-      await this.supabaseService.client
-        .from('ban_users')
-        .select('ban_id, user_id, unban_date')
-        .eq('ban_id', banId)
-        .maybeSingle();
+    const { data: ban, error: findError } = await this.supabaseService.client
+      .from('ban_users')
+      .select('ban_id, user_id, unban_date')
+      .eq('ban_id', banId)
+      .maybeSingle();
 
     if (findError) throw new NotFoundException(findError.message);
     if (!ban) throw new NotFoundException('Ban record not found');
 
-    const { error } =
-      await this.supabaseService.client
-        .from('ban_users')
-        .delete()
-        .eq('ban_id', banId);
+    const { error } = await this.supabaseService.client
+      .from('ban_users')
+      .delete()
+      .eq('ban_id', banId);
 
     if (error) throw new NotFoundException(error.message);
 

@@ -22,18 +22,23 @@ export class SupabaseService {
   async generateExplanationsBatch(user: any, careers: any[]) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!apiKey) {
-      console.error("Gemini API Error: Missing API Key");
+      console.error('Gemini API Error: Missing API Key');
       return {};
     }
 
-    const careersInfo = careers.map(c => `- ID: ${c.career_id}, Title: ${c.title}, Match: ${c.match_score}%, Has Skills: ${(c.matching_skills || []).join(', ') || 'None'}, Missing Skills: ${(c.skills_to_develop || []).join(', ') || 'None'}`).join('\n');
+    const careersInfo = careers
+      .map(
+        (c) =>
+          `- ID: ${c.career_id}, Title: ${c.title}, Match: ${c.match_score}%, Has Skills: ${(c.matching_skills || []).join(', ') || 'None'}, Missing Skills: ${(c.skills_to_develop || []).join(', ') || 'None'}`,
+      )
+      .join('\n');
 
     const prompt = `
 Profile:
 Faculty:${user.faculty}
 Major:${user.major}
-Skills:${(user.skills_detail || []).map((s: any) => s.name).join(",")}
-Interests:${(user.interests_detail || []).join(",")}
+Skills:${(user.skills_detail || []).map((s: any) => s.name).join(',')}
+Interests:${(user.interests_detail || []).join(',')}
 
 Careers:
 ${careersInfo}
@@ -51,20 +56,22 @@ Example format:
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       // Using Flash Lite tier as it is the most cost-effective option
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash-lite',
+      });
 
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
-          responseMimeType: "application/json",
+          responseMimeType: 'application/json',
           maxOutputTokens: 1000,
-        }
+        },
       });
 
       const text = result.response.text();
       return JSON.parse(text);
     } catch (e) {
-      console.error("Gemini SDK Error:", e);
+      console.error('Gemini SDK Error:', e);
       return {};
     }
   }

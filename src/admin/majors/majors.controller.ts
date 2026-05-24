@@ -1,4 +1,12 @@
-import { Controller, Delete, Patch, Param, Body, Post, Get } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Patch,
+  Param,
+  Body,
+  Post,
+  Get,
+} from '@nestjs/common';
 import { MajorsService } from './majors.service';
 import { ParseIntPipe } from '@nestjs/common';
 
@@ -14,7 +22,7 @@ export class MajorsController {
       th_name?: string;
       description?: string;
       faculty_id: number;
-    }
+    },
   ) {
     return this.service.create(body);
   }
@@ -33,7 +41,7 @@ export class MajorsController {
       th_name?: string;
       description?: string;
       faculty_id?: number;
-    }
+    },
   ) {
     return this.service.update(id, body);
   }

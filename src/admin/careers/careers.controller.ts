@@ -60,9 +60,7 @@ export class CareersController {
   @Get()
   getCareers(@Query('industry_id') industryId?: string) {
     if (industryId) {
-      return this.careersService.getCareersByIndustry(
-        Number(industryId),
-      );
+      return this.careersService.getCareersByIndustry(Number(industryId));
     }
     return this.careersService.getCareers();
   }
@@ -184,4 +182,3 @@ export class CareersController {
     );
   }
 }
-

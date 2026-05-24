@@ -11,7 +11,7 @@ export class AppController {
     private readonly supabaseService: SupabaseService,
     private readonly reviewsService: ReviewsService,
     private readonly trackProgressService: TrackProgressService,
-  ) { }
+  ) {}
 
   @Get()
   getHello(): string {
@@ -31,7 +31,9 @@ export class AppController {
   async getPublicProfile(@Param('id') id: string) {
     const { data, error } = await this.supabaseService.client
       .from('profiles')
-      .select('id, email, full_name, avatar_url, skills_mastered, joined_at, courses_completed, current_streak, total_learning_hours')
+      .select(
+        'id, email, full_name, avatar_url, skills_mastered, joined_at, courses_completed, current_streak, total_learning_hours',
+      )
       .eq('id', id)
       .single();
 

@@ -1,4 +1,12 @@
-import { Controller, Patch, Param, Body, Post, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Patch,
+  Param,
+  Body,
+  Post,
+  Get,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
 import { AdminGuard } from '../../auth/admin.guard';
@@ -19,10 +27,7 @@ export class UsersController {
   }
 
   @Post(':userId/ban')
-  banUser(
-    @Param('userId') userId: string,
-    @Body('reason') reason: string,
-  ) {
+  banUser(@Param('userId') userId: string, @Body('reason') reason: string) {
     return this.usersService.banUser(userId, reason);
   }
 

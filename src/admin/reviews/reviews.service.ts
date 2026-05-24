@@ -27,7 +27,7 @@ interface AddReplyData {
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly supabaseService: SupabaseService) { }
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   /* ================= CREATE REVIEW ================= */
   async createReview(data: CreateReviewData) {
@@ -76,11 +76,12 @@ export class ReviewsService {
   /* ================= GET REVIEWS BY USER ================= */
   async getReviewsByUser(userId: string) {
     // 1. Fetch reviews directly from public.reviews for immediate results
-    const { data: reviews, error: reviewsError } = await this.supabaseService.client
-      .from('reviews')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+    const { data: reviews, error: reviewsError } =
+      await this.supabaseService.client
+        .from('reviews')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
     if (reviewsError) {
       throw new NotFoundException(reviewsError.message);
@@ -91,18 +92,21 @@ export class ReviewsService {
     }
 
     // 2. Fetch career titles from admin.careers
-    const careerIds = [...new Set(reviews.map(r => r.career_id))];
+    const careerIds = [...new Set(reviews.map((r) => r.career_id))];
     const { data: careers } = await this.supabaseService.client
       .schema('admin')
       .from('careers')
       .select('career_id, title')
       .in('career_id', careerIds);
 
-    const careerMap = new Map(careers?.map(c => [c.career_id, c.title]) || []);
+    const careerMap = new Map(
+      careers?.map((c) => [c.career_id, c.title]) || [],
+    );
 
     return reviews.map((review: any) => ({
       ...this.mapReview(review),
-      careerTitle: careerMap.get(review.career_id) || `Career #${review.career_id}`,
+      careerTitle:
+        careerMap.get(review.career_id) || `Career #${review.career_id}`,
     }));
   }
 
@@ -133,7 +137,7 @@ export class ReviewsService {
         .eq('user_id', userId);
 
       if (likedRows) {
-        likedReviewIds = new Set(likedRows.map(r => r.review_id));
+        likedReviewIds = new Set(likedRows.map((r) => r.review_id));
       }
     }
 
@@ -142,7 +146,7 @@ export class ReviewsService {
         .filter((rep) => rep.parent_review_id === r.review_id)
         .map((rep) => ({
           ...this.mapReview(rep),
-          isLikedByMe: likedReviewIds.has(rep.review_id)
+          isLikedByMe: likedReviewIds.has(rep.review_id),
         }));
 
       return {
@@ -239,12 +243,13 @@ export class ReviewsService {
   /* ================= TOGGLE LIKE ================= */
   async toggleLike(reviewId: number, userId: string) {
     // 1. Check if the user already liked this review
-    const { data: existingLike, error: checkError } = await this.supabaseService.client
-      .from('review_likes')
-      .select('like_id')
-      .eq('review_id', reviewId)
-      .eq('user_id', userId)
-      .single();
+    const { data: existingLike, error: checkError } =
+      await this.supabaseService.client
+        .from('review_likes')
+        .select('like_id')
+        .eq('review_id', reviewId)
+        .eq('user_id', userId)
+        .single();
 
     // Get current review to update total likes
     const { data: review, error: getError } = await this.supabaseService.client
@@ -283,15 +288,16 @@ export class ReviewsService {
     }
 
     // 4. Update the total likes count in the reviews table
-    const { data: result, error: updateError } = await this.supabaseService.client
-      .from('reviews')
-      .update({
-        likes: newLikesCount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('review_id', reviewId)
-      .select()
-      .single();
+    const { data: result, error: updateError } =
+      await this.supabaseService.client
+        .from('reviews')
+        .update({
+          likes: newLikesCount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('review_id', reviewId)
+        .select()
+        .single();
 
     if (updateError) throw new BadRequestException(updateError.message);
 
@@ -345,13 +351,17 @@ export class ReviewsService {
   }
 
   /* ================= REPORT REVIEW ================= */
-  async reportReview(reviewId: number, data: { userId: string, reportType: string, reason?: string }) {
+  async reportReview(
+    reviewId: number,
+    data: { userId: string; reportType: string; reason?: string },
+  ) {
     // 1. ดึงข้อมูลรีวิว
-    const { data: review, error: fetchError } = await this.supabaseService.client
-      .from('reviews')
-      .select('user_id')
-      .eq('review_id', reviewId)
-      .single();
+    const { data: review, error: fetchError } =
+      await this.supabaseService.client
+        .from('reviews')
+        .select('user_id')
+        .eq('review_id', reviewId)
+        .single();
 
     if (fetchError || !review) {
       console.error('Fetch review error:', fetchError);

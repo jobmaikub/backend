@@ -75,10 +75,7 @@ export class ReviewsController {
 
   /* ================= TOGGLE LIKE ================= */
   @Patch(':id/like')
-  async toggleLike(
-    @Param('id') id: string,
-    @Body('userId') userId: string,
-  ) {
+  async toggleLike(@Param('id') id: string, @Body('userId') userId: string) {
     return this.reviewsService.toggleLike(Number(id), userId);
   }
 

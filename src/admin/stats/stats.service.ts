@@ -29,7 +29,10 @@ export class StatsService {
           .select('*', { count: 'exact', head: true });
 
         if (error) {
-          console.error(`Error fetching count for ${table.name}:`, error.message);
+          console.error(
+            `Error fetching count for ${table.name}:`,
+            error.message,
+          );
           stats[table.key] = 0;
         } else {
           stats[table.key] = count || 0;

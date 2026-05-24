@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Delete, Param, Body, Query, BadRequestException, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Query,
+  BadRequestException,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { LearningPathService } from './LearningPath.service';
 
 @Controller('learning-paths')
@@ -16,7 +26,7 @@ export class LearningPathController {
   @Post('start')
   startLearningPath(
     @Body('user_id') userId: string,
-    @Body('career_id') careerId: number
+    @Body('career_id') careerId: number,
   ) {
     if (!userId || !careerId) {
       throw new BadRequestException('user_id and career_id are required');
@@ -27,7 +37,7 @@ export class LearningPathController {
   @Get(':career_id/courses')
   getCareerCourses(
     @Param('career_id', ParseIntPipe) careerId: number,
-    @Query('user_id') userId: string
+    @Query('user_id') userId: string,
   ) {
     if (!userId) {
       throw new BadRequestException('user_id is required');
@@ -38,7 +48,7 @@ export class LearningPathController {
   @Get('courses/:course_id/lessons')
   getCourseLessons(
     @Param('course_id', ParseIntPipe) courseId: number,
-    @Query('user_id') userId: string
+    @Query('user_id') userId: string,
   ) {
     if (!userId) {
       throw new BadRequestException('user_id is required');
@@ -50,7 +60,7 @@ export class LearningPathController {
   completeLesson(
     @Param('lesson_id', ParseIntPipe) lessonId: number,
     @Body('user_id') userId: string,
-    @Body('done') done: boolean
+    @Body('done') done: boolean,
   ) {
     if (!userId) {
       throw new BadRequestException('user_id is required');
@@ -62,7 +72,7 @@ export class LearningPathController {
   completeCourse(
     @Param('course_id', ParseIntPipe) courseId: number,
     @Body('user_id') userId: string,
-    @Body('done') done: boolean
+    @Body('done') done: boolean,
   ) {
     if (!userId) {
       throw new BadRequestException('user_id is required');
@@ -73,7 +83,7 @@ export class LearningPathController {
   @Post('lessons/bulk-update')
   bulkUpdateLessons(
     @Body('user_id') userId: string,
-    @Body('updates') updates: { lesson_id: number, done: boolean }[]
+    @Body('updates') updates: { lesson_id: number; done: boolean }[],
   ) {
     if (!userId) {
       throw new BadRequestException('user_id is required');
@@ -84,7 +94,7 @@ export class LearningPathController {
   @Delete(':career_id')
   deleteLearningPath(
     @Param('career_id', ParseIntPipe) careerId: number,
-    @Query('user_id') userId: string
+    @Query('user_id') userId: string,
   ) {
     if (!userId) {
       throw new BadRequestException('user_id is required');

@@ -57,4 +57,4 @@ import { StatsModule } from './admin/stats/stats.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

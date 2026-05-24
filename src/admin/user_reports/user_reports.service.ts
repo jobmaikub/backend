@@ -7,9 +7,7 @@ import { SupabaseService } from '../../supabase/supabase.service';
 
 @Injectable()
 export class UserReportsService {
-  constructor(
-    private readonly supabaseService: SupabaseService,
-  ) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   async createReport(data: {
     by_user_id: string;
@@ -21,28 +19,27 @@ export class UserReportsService {
       throw new BadRequestException('Cannot report yourself');
     }
 
-    const { data: result, error } =
-      await this.supabaseService.client
-        .from('user_reports')
-        .insert({
-          by_user_id: data.by_user_id,
-          report_user_id: data.report_user_id,
-          reason: data.reason,
-          report_type: data.report_type ?? 'inappropriate',
-          status: 'pending',
-        })
-        .select()
-        .single();
+    const { data: result, error } = await this.supabaseService.client
+      .from('user_reports')
+      .insert({
+        by_user_id: data.by_user_id,
+        report_user_id: data.report_user_id,
+        reason: data.reason,
+        report_type: data.report_type ?? 'inappropriate',
+        status: 'pending',
+      })
+      .select()
+      .single();
 
     if (error) throw new BadRequestException(error.message);
     return result;
   }
 
   async getReports() {
-    const { data, error } =
-      await this.supabaseService.client
-        .from('user_reports')
-        .select(`
+    const { data, error } = await this.supabaseService.client
+      .from('user_reports')
+      .select(
+        `
           report_id,
           by_user_id,
           report_user_id,
@@ -55,18 +52,19 @@ export class UserReportsService {
           review:review_id(career_id),
           reporter:by_user_id(id, email, full_name),
           reported_user:report_user_id(id, email, full_name)
-        `)
-        .order('created_at', { ascending: false });
+        `,
+      )
+      .order('created_at', { ascending: false });
 
     if (error) throw new NotFoundException(error.message);
     return data;
   }
 
   async getPendingReports() {
-    const { data, error } =
-      await this.supabaseService.client
-        .from('user_reports')
-        .select(`
+    const { data, error } = await this.supabaseService.client
+      .from('user_reports')
+      .select(
+        `
           report_id,
           by_user_id,
           report_user_id,
@@ -78,21 +76,21 @@ export class UserReportsService {
           review:review_id(career_id),
           reporter:by_user_id(id, email, full_name),
           reported_user:report_user_id(id, email, full_name)
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+        `,
+      )
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
 
     if (error) throw new NotFoundException(error.message);
     return data;
   }
 
   async getReportById(reportId: string) {
-    const { data, error } =
-      await this.supabaseService.client
-        .from('user_reports')
-        .select('*')
-        .eq('report_id', reportId)
-        .single();
+    const { data, error } = await this.supabaseService.client
+      .from('user_reports')
+      .select('*')
+      .eq('report_id', reportId)
+      .single();
 
     if (error || !data) {
       throw new NotFoundException('Report not found');
@@ -116,20 +114,21 @@ export class UserReportsService {
 
     if (data.reason !== undefined) updateData.reason = data.reason;
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.resolved_by !== undefined) updateData.resolved_by = data.resolved_by;
-    if (data.resolution_note !== undefined) updateData.resolution_note = data.resolution_note;
+    if (data.resolved_by !== undefined)
+      updateData.resolved_by = data.resolved_by;
+    if (data.resolution_note !== undefined)
+      updateData.resolution_note = data.resolution_note;
 
     if (data.status === 'resolved') {
       updateData.resolved_at = new Date().toISOString();
     }
 
-    const { data: result, error } =
-      await this.supabaseService.client
-        .from('user_reports')
-        .update(updateData)
-        .eq('report_id', reportId)
-        .select()
-        .single();
+    const { data: result, error } = await this.supabaseService.client
+      .from('user_reports')
+      .update(updateData)
+      .eq('report_id', reportId)
+      .select()
+      .single();
 
     if (error) throw new BadRequestException(error.message);
     if (!result) throw new NotFoundException('Report not found');
@@ -176,8 +175,7 @@ export class UserReportsService {
     let banResult = activeBan;
     if (!activeBan) {
       const banReason =
-        data.ban_reason ??
-        `Resolved from report ${reportId}: ${report.reason}`;
+        data.ban_reason ?? `Resolved from report ${reportId}: ${report.reason}`;
 
       const { data: insertedBan, error: banError } =
         await this.supabaseService.client
@@ -195,11 +193,10 @@ export class UserReportsService {
       banResult = insertedBan;
     }
 
-    const { error: profileUpdateError } =
-      await this.supabaseService.client
-        .from('profiles')
-        .update({ is_banned: true })
-        .eq('id', report.report_user_id);
+    const { error: profileUpdateError } = await this.supabaseService.client
+      .from('profiles')
+      .update({ is_banned: true })
+      .eq('id', report.report_user_id);
 
     if (profileUpdateError) {
       throw new BadRequestException(profileUpdateError.message);
@@ -207,8 +204,7 @@ export class UserReportsService {
 
     const now = new Date().toISOString();
     const resolutionNote =
-      data.resolution_note ??
-      `Resolved by admin from report ${reportId}`;
+      data.resolution_note ?? `Resolved by admin from report ${reportId}`;
 
     const { data: resolvedReports, error: resolveReportsError } =
       await this.supabaseService.client
@@ -222,19 +218,25 @@ export class UserReportsService {
         })
         .eq('report_user_id', report.report_user_id)
         .eq('status', 'pending')
-        .select('report_id, status, updated_at, resolved_at, resolved_by, resolution_note');
+        .select(
+          'report_id, status, updated_at, resolved_at, resolved_by, resolution_note',
+        );
 
     if (resolveReportsError) {
       throw new BadRequestException(resolveReportsError.message);
     }
 
-    let primaryResolvedReport = resolvedReports?.find((r) => r.report_id === reportId);
+    let primaryResolvedReport = resolvedReports?.find(
+      (r) => r.report_id === reportId,
+    );
 
     if (!primaryResolvedReport) {
       const { data: fallbackReport, error: fallbackError } =
         await this.supabaseService.client
           .from('user_reports')
-          .select('report_id, status, updated_at, resolved_at, resolved_by, resolution_note')
+          .select(
+            'report_id, status, updated_at, resolved_at, resolved_by, resolution_note',
+          )
           .eq('report_id', reportId)
           .maybeSingle();
 
@@ -260,10 +262,10 @@ export class UserReportsService {
   }
 
   async getReportsByUserId(userId: string) {
-    const { data, error } =
-      await this.supabaseService.client
-        .from('user_reports')
-        .select(`
+    const { data, error } = await this.supabaseService.client
+      .from('user_reports')
+      .select(
+        `
           report_id,
           by_user_id,
           report_user_id,
@@ -273,20 +275,20 @@ export class UserReportsService {
           created_at,
           review_id,
           reporter:by_user_id(id, email, full_name)
-        `)
-        .eq('report_user_id', userId)
-        .order('created_at', { ascending: false });
+        `,
+      )
+      .eq('report_user_id', userId)
+      .order('created_at', { ascending: false });
 
     if (error) throw new NotFoundException(error.message);
     return data;
   }
 
   async deleteReport(reportId: string) {
-    const { error } =
-      await this.supabaseService.client
-        .from('user_reports')
-        .delete()
-        .eq('report_id', reportId);
+    const { error } = await this.supabaseService.client
+      .from('user_reports')
+      .delete()
+      .eq('report_id', reportId);
 
     if (error) throw new NotFoundException(error.message);
     return { success: true };

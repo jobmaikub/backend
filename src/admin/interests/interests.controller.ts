@@ -11,14 +11,10 @@ import { InterestsService } from './interests.service';
 
 @Controller('interests')
 export class InterestsController {
-  constructor(
-    private readonly interestsService: InterestsService,
-  ) {}
+  constructor(private readonly interestsService: InterestsService) {}
 
   @Post()
-  createInterest(
-    @Body() body: { interest_name: string },
-  ) {
+  createInterest(@Body() body: { interest_name: string }) {
     return this.interestsService.createInterest(body);
   }
 
@@ -37,16 +33,11 @@ export class InterestsController {
     @Param('id') id: string,
     @Body() body: { interest_name?: string },
   ) {
-    return this.interestsService.updateInterest(
-      Number(id),
-      body,
-    );
+    return this.interestsService.updateInterest(Number(id), body);
   }
 
   @Delete(':id')
   deleteInterest(@Param('id') id: string) {
-    return this.interestsService.deleteInterest(
-      Number(id),
-    );
+    return this.interestsService.deleteInterest(Number(id));
   }
 }

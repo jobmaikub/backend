@@ -4,7 +4,7 @@ import { UserReportsService } from './user_reports.service';
 import { SupabaseModule } from '../../supabase/supabase.module';
 
 @Module({
-  imports: [SupabaseModule], 
+  imports: [SupabaseModule],
   controllers: [UserReportsController],
   providers: [UserReportsService],
 })

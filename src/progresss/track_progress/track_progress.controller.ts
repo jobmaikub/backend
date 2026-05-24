@@ -1,4 +1,3 @@
-
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { TrackProgressService } from './track_progress.service';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
@@ -6,9 +5,7 @@ import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
 @Controller('track-progress')
 @UseGuards(SupabaseAuthGuard)
 export class TrackProgressController {
-  constructor(
-    private readonly trackProgressService: TrackProgressService,
-  ) {}
+  constructor(private readonly trackProgressService: TrackProgressService) {}
 
   @Get('stats')
   getStats(@Req() req: any) {

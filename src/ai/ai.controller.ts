@@ -3,7 +3,7 @@ import { AiService } from './ai.service';
 
 @Controller('ai')
 export class AiController {
-  constructor(private readonly aiService: AiService) { }
+  constructor(private readonly aiService: AiService) {}
 
   @Get('faculties')
   async getFaculties(@Query('search') search?: string) {

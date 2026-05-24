@@ -4,7 +4,7 @@ import { NewsService } from './news.service';
 import { SupabaseModule } from '../../supabase/supabase.module';
 
 @Module({
-  imports: [SupabaseModule], 
+  imports: [SupabaseModule],
   controllers: [NewsController],
   providers: [NewsService],
 })

@@ -4,7 +4,7 @@ import { BanUsersService } from './ban_users.service';
 import { SupabaseModule } from '../../supabase/supabase.module';
 
 @Module({
-  imports: [SupabaseModule], 
+  imports: [SupabaseModule],
   controllers: [BanUsersController],
   providers: [BanUsersService],
 })
